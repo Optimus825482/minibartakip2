@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Stok Girişi - Minibar Takip Sistemi{% endblock %}
+{% block page_title %}Stok Girişi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Stok Girişi Formu -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 mb-6">Yeni Stok Girişi</h3>
+
+            <form method="POST" class="space-y-6">
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="urun_id" class="block text-sm font-medium text-slate-700">
+                            Ürün <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <select id="urun_id" name="urun_id" required
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="">Ürün seçiniz...</option>
+                                {% for urun in urunler %}
+                                <option value="{{ urun.id }}">{{ urun.urun_adi }} ({{ urun.grup.grup_adi }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="miktar" class="block text-sm font-medium text-slate-700">
+                            Miktar <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input id="miktar" name="miktar" type="number" min="1" required
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                placeholder="Miktar">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="hareket_tipi" class="block text-sm font-medium text-slate-700">
+                            Hareket Tipi <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <select id="hareket_tipi" name="hareket_tipi" required
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="">Hareket tipi seçiniz...</option>
+                                <option value="giris">Stok Girişi</option>
+                                <option value="devir">Devir</option>
+                                <option value="sayim">Sayım</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="aciklama" class="block text-sm font-medium text-slate-700">
+                            Açıklama
+                        </label>
+                        <div class="mt-1">
+                            <textarea id="aciklama" name="aciklama" rows="3"
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                placeholder="Stok girişi hakkında ek bilgiler..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit"
+                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                        Stok Girişi Yap
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Son Stok Hareketleri -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 mb-4">Son Stok Hareketleri</h3>
+
+            {% if stok_hareketleri %}
+            <div class="overflow-hidden">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Tarih</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Ürün</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Hareket Tipi</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Miktar</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                İşlem Yapan</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Açıklama</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-200">
+                        {% for hareket in stok_hareketleri %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {{ hareket.islem_tarihi.strftime('%d.%m.%Y %H:%M') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                                {{ hareket.urun.urun_adi }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if hareket.hareket_tipi == 'giris' %}
+                                <span
+                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                    Giriş
+                                </span>
+                                {% elif hareket.hareket_tipi == 'cikis' %}
+                                <span
+                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                    Çıkış
+                                </span>
+                                {% elif hareket.hareket_tipi == 'devir' %}
+                                <span
+                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    Devir
+                                </span>
+                                {% else %}
+                                <span
+                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    Sayım
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {{ hareket.miktar }} {{ hareket.urun.birim }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {% if hareket.islem_yapan %}
+                                {{ hareket.islem_yapan.ad }} {{ hareket.islem_yapan.soyad }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-500">
+                                {{ hareket.aciklama if hareket.aciklama else '-' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                <a href="{{ url_for('stok_duzenle', hareket_id=hareket.id) }}"
+                                    class="text-slate-600 hover:text-slate-900">
+                                    Düzenle
+                                </a>
+                                <form method="POST" action="{{ url_for('stok_sil', hareket_id=hareket.id) }}"
+                                    class="inline">
+                                    <button type="submit" class="text-red-600 hover:text-red-900"
+                                        onclick="return confirm('Bu stok hareketini silmek istediğinizden emin misiniz?')">
+                                        Sil
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                    </path>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-slate-900">Henüz stok hareketi bulunmuyor</h3>
+                <p class="mt-1 text-sm text-slate-500">Yukarıdaki formu kullanarak ilk stok girişinizi yapın.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Stok Hareketi Düzenle - Minibar Takip Sistemi{% endblock %}
+{% block page_title %}Stok Hareketi Düzenle{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-slate-900 mb-6">Stok Hareket Bilgilerini Düzenle</h2>
+
+        <form method="POST" action="{{ url_for('stok_duzenle', hareket_id=hareket.id) }}">
+            <!-- Ürün Bilgisi (Read-only) -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Ürün</label>
+                <input type="text" value="{{ hareket.urun.urun_adi }}" readonly
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md bg-slate-50 text-slate-600 cursor-not-allowed">
+            </div>
+
+            <!-- Hareket Tipi -->
+            <div class="mb-4">
+                <label for="hareket_tipi" class="block text-sm font-medium text-slate-700 mb-2">Hareket Tipi <span
+                        class="text-red-500">*</span></label>
+                <select id="hareket_tipi" name="hareket_tipi" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500">
+                    <option value="giris" {% if hareket.hareket_tipi=='giris' %}selected{% endif %}>Giriş</option>
+                    <option value="cikis" {% if hareket.hareket_tipi=='cikis' %}selected{% endif %}>Çıkış</option>
+                    <option value="devir" {% if hareket.hareket_tipi=='devir' %}selected{% endif %}>Devir</option>
+                    <option value="sayim" {% if hareket.hareket_tipi=='sayim' %}selected{% endif %}>Sayım</option>
+                </select>
+            </div>
+
+            <!-- Miktar -->
+            <div class="mb-4">
+                <label for="miktar" class="block text-sm font-medium text-slate-700 mb-2">Miktar <span
+                        class="text-red-500">*</span></label>
+                <input type="number" id="miktar" name="miktar" value="{{ hareket.miktar }}" required min="1"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500">
+            </div>
+
+            <!-- Açıklama -->
+            <div class="mb-6">
+                <label for="aciklama" class="block text-sm font-medium text-slate-700 mb-2">Açıklama</label>
+                <textarea id="aciklama" name="aciklama" rows="3"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500">{{ hareket.aciklama or '' }}</textarea>
+            </div>
+
+            <!-- İşlem Tarihi (Read-only) -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">İşlem Tarihi</label>
+                <input type="text" value="{{ hareket.islem_tarihi.strftime('%d.%m.%Y %H:%M') }}" readonly
+                    class="w-full px-3 py-2 border border-slate-300 rounded-md bg-slate-50 text-slate-600 cursor-not-allowed">
+            </div>
+
+            <!-- Butonlar -->
+            <div class="flex items-center justify-end space-x-3">
+                <a href="{{ url_for('stok_giris') }}"
+                    class="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 transition-colors">
+                    İptal
+                </a>
+                <button type="submit"
+                    class="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 transition-colors">
+                    Kaydet
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

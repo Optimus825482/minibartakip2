@@ -1,0 +1,264 @@
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+from sqlalchemy import Numeric
+
+db = SQLAlchemy()
+
+class Otel(db.Model):
+    """Otel bilgileri tablosu"""
+    __tablename__ = 'oteller'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ad = db.Column(db.String(200), nullable=False)
+    adres = db.Column(db.Text)
+    telefon = db.Column(db.String(20))
+    email = db.Column(db.String(100))
+    vergi_no = db.Column(db.String(50))
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    aktif = db.Column(db.Boolean, default=True)
+    
+    # İlişkiler
+    katlar = db.relationship('Kat', backref='otel', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Otel {self.ad}>'
+
+
+class Kullanici(db.Model):
+    """Kullanıcılar tablosu - Tüm roller"""
+    __tablename__ = 'kullanicilar'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    kullanici_adi = db.Column(db.String(50), unique=True, nullable=False)
+    sifre_hash = db.Column(db.String(255), nullable=False)
+    ad = db.Column(db.String(100), nullable=False)
+    soyad = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100))
+    telefon = db.Column(db.String(20))
+    rol = db.Column(db.Enum('sistem_yoneticisi', 'admin', 'depo_sorumlusu', 'kat_sorumlusu'), nullable=False)
+    aktif = db.Column(db.Boolean, default=True)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    son_giris = db.Column(db.DateTime)
+    
+    # İlişkiler
+    zimmet_kayitlari = db.relationship('PersonelZimmet', 
+                                       foreign_keys='PersonelZimmet.personel_id',
+                                       backref='personel', 
+                                       lazy=True)
+    teslim_ettigi_zimmetler = db.relationship('PersonelZimmet',
+                                              foreign_keys='PersonelZimmet.teslim_eden_id',
+                                              lazy=True)
+    minibar_islemleri = db.relationship('MinibarIslem', backref='personel', lazy=True)
+    
+    def sifre_belirle(self, sifre):
+        """Şifreyi hashleyerek kaydet"""
+        self.sifre_hash = generate_password_hash(sifre)
+    
+    def sifre_kontrol(self, sifre):
+        """Şifre kontrolü"""
+        return check_password_hash(self.sifre_hash, sifre)
+    
+    def __repr__(self):
+        return f'<Kullanici {self.kullanici_adi} ({self.rol})>'
+
+
+class Kat(db.Model):
+    """Katlar tablosu"""
+    __tablename__ = 'katlar'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    otel_id = db.Column(db.Integer, db.ForeignKey('oteller.id'), nullable=False)
+    kat_adi = db.Column(db.String(50), nullable=False)
+    kat_no = db.Column(db.Integer, nullable=False)
+    aciklama = db.Column(db.Text)
+    aktif = db.Column(db.Boolean, default=True)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # İlişkiler
+    odalar = db.relationship('Oda', backref='kat', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Kat {self.kat_adi}>'
+
+
+class Oda(db.Model):
+    """Odalar tablosu"""
+    __tablename__ = 'odalar'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    kat_id = db.Column(db.Integer, db.ForeignKey('katlar.id'), nullable=False)
+    oda_no = db.Column(db.String(20), nullable=False, unique=True)
+    oda_tipi = db.Column(db.String(50))
+    kapasite = db.Column(db.Integer)
+    aktif = db.Column(db.Boolean, default=True)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # İlişkiler
+    minibar_islemleri = db.relationship('MinibarIslem', backref='oda', lazy=True)
+    
+    def __repr__(self):
+        return f'<Oda {self.oda_no}>'
+
+
+class UrunGrup(db.Model):
+    """Ürün grupları tablosu"""
+    __tablename__ = 'urun_gruplari'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    grup_adi = db.Column(db.String(100), nullable=False, unique=True)
+    aciklama = db.Column(db.Text)
+    aktif = db.Column(db.Boolean, default=True)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # İlişkiler
+    urunler = db.relationship('Urun', backref='grup', lazy=True)
+    
+    def __repr__(self):
+        return f'<UrunGrup {self.grup_adi}>'
+
+
+class Urun(db.Model):
+    """Ürünler tablosu"""
+    __tablename__ = 'urunler'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    grup_id = db.Column(db.Integer, db.ForeignKey('urun_gruplari.id'), nullable=False)
+    urun_adi = db.Column(db.String(200), nullable=False)
+    barkod = db.Column(db.String(50), unique=True)
+    birim = db.Column(db.String(20), default='Adet')
+    kritik_stok_seviyesi = db.Column(db.Integer, default=10)
+    aktif = db.Column(db.Boolean, default=True)
+    olusturma_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # İlişkiler
+    stok_hareketleri = db.relationship('StokHareket', backref='urun', lazy=True)
+    zimmet_detaylari = db.relationship('PersonelZimmetDetay', backref='urun', lazy=True)
+    minibar_detaylari = db.relationship('MinibarIslemDetay', backref='urun', lazy=True)
+    
+    def __repr__(self):
+        return f'<Urun {self.urun_adi}>'
+
+
+class StokHareket(db.Model):
+    """Stok hareketleri tablosu - Depo giriş/çıkış"""
+    __tablename__ = 'stok_hareketleri'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    urun_id = db.Column(db.Integer, db.ForeignKey('urunler.id'), nullable=False)
+    hareket_tipi = db.Column(db.Enum('giris', 'cikis', 'devir', 'sayim'), nullable=False)
+    miktar = db.Column(db.Integer, nullable=False)
+    aciklama = db.Column(db.Text)
+    islem_yapan_id = db.Column(db.Integer, db.ForeignKey('kullanicilar.id'))
+    islem_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # İlişki
+    islem_yapan = db.relationship('Kullanici', foreign_keys=[islem_yapan_id])
+    
+    def __repr__(self):
+        return f'<StokHareket {self.hareket_tipi} - {self.miktar}>'
+
+
+class PersonelZimmet(db.Model):
+    """Personel zimmet tablosu - Kat sorumlusu zimmet başlık"""
+    __tablename__ = 'personel_zimmet'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    personel_id = db.Column(db.Integer, db.ForeignKey('kullanicilar.id'), nullable=False)
+    zimmet_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    teslim_eden_id = db.Column(db.Integer, db.ForeignKey('kullanicilar.id'))
+    durum = db.Column(db.Enum('aktif', 'tamamlandi', 'iptal'), default='aktif')
+    aciklama = db.Column(db.Text)
+    
+    # İlişkiler
+    teslim_eden = db.relationship('Kullanici', 
+                                  foreign_keys=[teslim_eden_id],
+                                  overlaps="teslim_ettigi_zimmetler")
+    detaylar = db.relationship('PersonelZimmetDetay', backref='zimmet', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<PersonelZimmet #{self.id}>'
+
+
+class PersonelZimmetDetay(db.Model):
+    """Personel zimmet detay tablosu"""
+    __tablename__ = 'personel_zimmet_detay'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    zimmet_id = db.Column(db.Integer, db.ForeignKey('personel_zimmet.id'), nullable=False)
+    urun_id = db.Column(db.Integer, db.ForeignKey('urunler.id'), nullable=False)
+    miktar = db.Column(db.Integer, nullable=False)
+    kullanilan_miktar = db.Column(db.Integer, default=0)
+    kalan_miktar = db.Column(db.Integer)
+    iade_edilen_miktar = db.Column(db.Integer, default=0)
+    
+    def __repr__(self):
+        return f'<PersonelZimmetDetay #{self.id}>'
+
+
+class MinibarIslem(db.Model):
+    """Minibar işlemleri tablosu - Kontrol ve tüketim başlık"""
+    __tablename__ = 'minibar_islemleri'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    oda_id = db.Column(db.Integer, db.ForeignKey('odalar.id'), nullable=False)
+    personel_id = db.Column(db.Integer, db.ForeignKey('kullanicilar.id'), nullable=False)
+    islem_tipi = db.Column(db.Enum('ilk_dolum', 'kontrol', 'doldurma'), nullable=False)
+    islem_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
+    aciklama = db.Column(db.Text)
+    
+    # İlişkiler
+    detaylar = db.relationship('MinibarIslemDetay', backref='islem', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<MinibarIslem #{self.id} - {self.islem_tipi}>'
+
+
+class MinibarIslemDetay(db.Model):
+    """Minibar işlem detay tablosu"""
+    __tablename__ = 'minibar_islem_detay'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    islem_id = db.Column(db.Integer, db.ForeignKey('minibar_islemleri.id'), nullable=False)
+    urun_id = db.Column(db.Integer, db.ForeignKey('urunler.id'), nullable=False)
+    baslangic_stok = db.Column(db.Integer, default=0)
+    bitis_stok = db.Column(db.Integer, default=0)
+    tuketim = db.Column(db.Integer, default=0)
+    eklenen_miktar = db.Column(db.Integer, default=0)
+    
+    def __repr__(self):
+        return f'<MinibarIslemDetay #{self.id}>'
+
+
+class SistemAyar(db.Model):
+    """Sistem ayarları tablosu"""
+    __tablename__ = 'sistem_ayarlari'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    anahtar = db.Column(db.String(100), unique=True, nullable=False)
+    deger = db.Column(db.Text)
+    aciklama = db.Column(db.Text)
+    
+    def __repr__(self):
+        return f'<SistemAyar {self.anahtar}>'
+
+
+class SistemLog(db.Model):
+    """Sistem log kayıtları tablosu"""
+    __tablename__ = 'sistem_loglari'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    kullanici_id = db.Column(db.Integer, db.ForeignKey('kullanicilar.id'))
+    islem_tipi = db.Column(db.String(50), nullable=False)  # giris, cikis, ekleme, guncelleme, silme, goruntuleme
+    modul = db.Column(db.String(100), nullable=False)  # urun, stok, zimmet, oda, kat vb.
+    islem_detay = db.Column(db.Text)  # İşlem detayları (JSON formatında)
+    ip_adresi = db.Column(db.String(50))
+    tarayici = db.Column(db.String(200))
+    islem_tarihi = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # İlişki
+    kullanici = db.relationship('Kullanici', foreign_keys=[kullanici_id], backref='log_kayitlari')
+    
+    def __repr__(self):
+        return f'<SistemLog {self.islem_tipi} - {self.modul}>'
+

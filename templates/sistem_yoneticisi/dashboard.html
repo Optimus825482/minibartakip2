@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block title %}Yönetim Paneli - Minibar Takip Sistemi{% endblock %}
+{% block page_title %}Yönetim Paneli{% endblock %}
+
+{% block content %}
+<div class="space-y-4 md:space-y-6">
+    <!-- İstatistik Kartları - Responsive Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+        <div class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+            <div class="p-4 md:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-500 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                                </path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4 md:ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-xs md:text-sm font-medium text-slate-500 truncate">Toplam Kat</dt>
+                            <dd class="text-xl md:text-2xl font-semibold text-slate-900">{{ toplam_kat }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+            <div class="p-4 md:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-green-500 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4 md:ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-xs md:text-sm font-medium text-slate-500 truncate">Toplam Oda</dt>
+                            <dd class="text-xl md:text-2xl font-semibold text-slate-900">{{ toplam_oda }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+            <div class="p-4 md:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div
+                            class="w-10 h-10 md:w-12 md:h-12 bg-yellow-500 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z">
+                                </path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4 md:ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-xs md:text-sm font-medium text-slate-500 truncate">Toplam Kullanıcı</dt>
+                            <dd class="text-xl md:text-2xl font-semibold text-slate-900">{{ toplam_kullanici }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
+            <div class="p-4 md:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div
+                            class="w-10 h-10 md:w-12 md:h-12 bg-purple-500 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                </path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4 md:ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-xs md:text-sm font-medium text-slate-500 truncate">Toplam Personel</dt>
+                            <dd class="text-xl md:text-2xl font-semibold text-slate-900">{{ toplam_personel }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grafikler - Responsive Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <!-- Kullanıcı Rol Dağılımı -->
+        <div class="bg-white shadow rounded-lg p-4 md:p-6">
+            <h3 class="text-base md:text-lg leading-6 font-medium text-slate-900 mb-4">Kullanıcı Rol Dağılımı</h3>
+            <div class="h-64 md:h-80">
+                <canvas id="rolDagilimChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Kat Bazlı Oda Sayıları -->
+        <div class="bg-white shadow rounded-lg p-4 md:p-6">
+            <h3 class="text-base md:text-lg leading-6 font-medium text-slate-900 mb-4">Kat Bazlı Oda Sayıları</h3>
+            <div class="h-64 md:h-80">
+                <canvas id="katOdaChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sistem Yönetimi -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-base md:text-lg leading-6 font-medium text-slate-900 mb-4">Sistem Yönetimi</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                <a href="{{ url_for('otel_tanimla') }}"
+                    class="relative group bg-white p-4 md:p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-slate-500 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                    <div>
+                        <span class="rounded-lg inline-flex p-2 md:p-3 bg-blue-50 text-blue-700 ring-4 ring-white">
+                            <svg class="h-5 w-5 md:h-6 md:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                                </path>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="mt-3 md:mt-4">
+                        <h3 class="text-sm md:text-base lg:text-lg font-medium">
+                            <span class="absolute inset-0" aria-hidden="true"></span>
+                            Otel Yönetimi
+                        </h3>
+                        <p class="mt-1 md:mt-2 text-xs md:text-sm text-slate-500">Otel bilgilerini yönetin</p>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('kat_tanimla') }}"
+                    class="relative group bg-white p-4 md:p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-slate-500 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                    <div>
+                        <span class="rounded-lg inline-flex p-2 md:p-3 bg-green-50 text-green-700 ring-4 ring-white">
+                            <svg class="h-5 w-5 md:h-6 md:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="mt-3 md:mt-4">
+                        <h3 class="text-sm md:text-base lg:text-lg font-medium">
+                            <span class="absolute inset-0" aria-hidden="true"></span>
+                            Kat Yönetimi
+                        </h3>
+                        <p class="mt-1 md:mt-2 text-xs md:text-sm text-slate-500">Kat tanımlamalarını yönetin</p>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('oda_tanimla') }}"
+                    class="relative group bg-white p-4 md:p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-slate-500 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                    <div>
+                        <span class="rounded-lg inline-flex p-2 md:p-3 bg-purple-50 text-purple-700 ring-4 ring-white">
+                            <svg class="h-5 w-5 md:h-6 md:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="mt-3 md:mt-4">
+                        <h3 class="text-sm md:text-base lg:text-lg font-medium">
+                            <span class="absolute inset-0" aria-hidden="true"></span>
+                            Oda Yönetimi
+                        </h3>
+                        <p class="mt-1 md:mt-2 text-xs md:text-sm text-slate-500">Oda tanımlamalarını yönetin</p>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('personel_tanimla') }}"
+                    class="relative group bg-white p-4 md:p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-slate-500 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                    <div>
+                        <span class="rounded-lg inline-flex p-2 md:p-3 bg-indigo-50 text-indigo-700 ring-4 ring-white">
+                            <svg class="h-5 w-5 md:h-6 md:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z">
+                                </path>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="mt-3 md:mt-4">
+                        <h3 class="text-sm md:text-base lg:text-lg font-medium">
+                            <span class="absolute inset-0" aria-hidden="true"></span>
+                            Kullanıcı Yönetimi
+                        </h3>
+                        <p class="mt-1 md:mt-2 text-xs md:text-sm text-slate-500">Kullanıcıları yönetin</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Son Eklenen Katlar ve Odalar - Responsive Tablo -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <!-- Son Eklenen Katlar -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-base md:text-lg leading-6 font-medium text-slate-900 mb-4">Son Eklenen Katlar</h3>
+                {% if son_katlar %}
+                <div class="overflow-x-auto -mx-4 sm:mx-0">
+                    <div class="inline-block min-w-full align-middle">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th
+                                        class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                        Kat Adı</th>
+                                    <th
+                                        class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider hidden sm:table-cell">
+                                        Kat No</th>
+                                    <th
+                                        class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                        Oda Sayısı</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-slate-200">
+                                {% for kat in son_katlar %}
+                                <tr class="hover:bg-slate-50">
+                                    <td
+                                        class="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium text-slate-900">
+                                        {{ kat.kat_adi }}</td>
+                                    <td
+                                        class="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500 hidden sm:table-cell">
+                                        {{ kat.kat_no }}</td>
+                                    <td
+                                        class="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500">
+                                        {{ kat.odalar|length }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-slate-500 text-center py-4 text-sm">Henüz kat eklenmemiş.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Son Eklenen Odalar -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-base md:text-lg leading-6 font-medium text-slate-900 mb-4">Son Eklenen Odalar</h3>
+                {% if son_odalar %}
+                <div class="overflow-x-auto -mx-4 sm:mx-0">
+                    <div class="inline-block min-w-full align-middle">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th
+                                        class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                        Oda No</th>
+                                    <th
+                                        class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider hidden sm:table-cell">
+                                        Kat</th>
+                                    <th
+                                        class="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                        Oda Tipi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-slate-200">
+                                {% for oda in son_odalar %}
+                                <tr class="hover:bg-slate-50">
+                                    <td
+                                        class="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium text-slate-900">
+                                        {{ oda.oda_no }}</td>
+                                    <td
+                                        class="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500 hidden sm:table-cell">
+                                        {{ oda.kat.kat_adi }}</td>
+                                    <td
+                                        class="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500">
+                                        {{ oda.oda_tipi or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-slate-500 text-center py-4 text-sm">Henüz oda eklenmemiş.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Kullanıcı Rol Dağılımı Pie Chart
+    const rolCtx = document.getElementById( 'rolDagilimChart' );
+    if ( rolCtx ) {
+        new Chart( rolCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Admin', 'Depo Sorumlusu', 'Kat Sorumlusu'],
+                datasets: [{
+                    data: [{{ admin_count }}, {{ depo_count }}, {{ kat_count }}],
+    backgroundColor: [
+        'rgba(59, 130, 246, 0.8)',   // Blue
+        'rgba(16, 185, 129, 0.8)',   // Green
+        'rgba(245, 158, 11, 0.8)'    // Yellow
+    ],
+        borderColor: [
+            'rgba(59, 130, 246, 1)',
+            'rgba(16, 185, 129, 1)',
+            'rgba(245, 158, 11, 1)'
+        ],
+            borderWidth: 2
+            }]
+        },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: {
+            legend: {
+                position: 'bottom',
+                    labels: {
+                    padding: 15,
+                        font: {
+                        size: window.innerWidth < 768 ? 11 : 12
+                    }
+                }
+            },
+            title: {
+                display: false
+            }
+        }
+    }
+    });
+}
+
+    // Kat Bazlı Oda Sayıları Bar Chart
+    const katOdaCtx = document.getElementById( 'katOdaChart' );
+    if ( katOdaCtx ) {
+        new Chart( katOdaCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ kat_labels| tojson }},
+    datasets: [{
+        label: 'Oda Sayısı',
+        data: {{ kat_oda_sayilari| tojson }},
+        backgroundColor: 'rgba(139, 92, 246, 0.8)',
+        borderColor: 'rgba(139, 92, 246, 1)',
+        borderWidth: 2,
+        borderRadius: 6
+            }]
+        },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                scales: {
+            y: {
+                beginAtZero: true,
+                    ticks: {
+                    stepSize: 1,
+                        font: {
+                        size: window.innerWidth < 768 ? 10 : 11
+                    }
+                },
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                }
+            },
+            x: {
+                ticks: {
+                    font: {
+                        size: window.innerWidth < 768 ? 10 : 11
+                    }
+                },
+                grid: {
+                    display: false
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            title: {
+                display: false
+            }
+        }
+    }
+    });
+}
+
+    // Responsive chart resize
+    window.addEventListener( 'resize', function () {
+        Chart.instances.forEach( chart => {
+            chart.resize();
+        } );
+    } );
+</script>
+{% endblock %}

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Kullanıcı Yönetimi - Minibar Takip Sistemi{% endblock %}
+{% block page_title %}Kullanıcı Yönetimi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Personel Ekleme Formu -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 mb-6">Yeni Kullanıcı Ekle</h3>
+            
+            <form method="POST" class="space-y-6">
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="kullanici_adi" class="block text-sm font-medium text-slate-700">
+                            Kullanıcı Adı <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input id="kullanici_adi" name="kullanici_adi" type="text" required
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                   placeholder="Kullanıcı adı">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="sifre" class="block text-sm font-medium text-slate-700">
+                            Şifre <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input id="sifre" name="sifre" type="password" required
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                   placeholder="Şifre">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="ad" class="block text-sm font-medium text-slate-700">
+                            Ad <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input id="ad" name="ad" type="text" required
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                   placeholder="Ad">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="soyad" class="block text-sm font-medium text-slate-700">
+                            Soyad <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input id="soyad" name="soyad" type="text" required
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                   placeholder="Soyad">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="rol" class="block text-sm font-medium text-slate-700">
+                            Rol <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <select id="rol" name="rol" required
+                                    class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="">Rol seçiniz...</option>
+                                <option value="admin">Admin</option>
+                                <option value="depo_sorumlusu">Depo Sorumlusu</option>
+                                <option value="kat_sorumlusu">Kat Sorumlusu</option>
+                            </select>
+                        </div>
+                        <p class="mt-2 text-sm text-slate-500">
+                            <strong>Admin:</strong> Tüm sistem yetkileri<br>
+                            <strong>Depo Sorumlusu:</strong> Stok yönetimi ve zimmet atama<br>
+                            <strong>Kat Sorumlusu:</strong> Minibar kontrol ve oda işlemleri
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-slate-700">
+                            Email
+                        </label>
+                        <div class="mt-1">
+                            <input id="email" name="email" type="email"
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                   placeholder="email@example.com">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="telefon" class="block text-sm font-medium text-slate-700">
+                            Telefon
+                        </label>
+                        <div class="mt-1">
+                            <input id="telefon" name="telefon" type="tel"
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                   placeholder="Telefon numarası">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit"
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                        Kullanıcı Ekle
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mevcut Personeller Listesi -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 mb-4">Mevcut Kullanıcılar</h3>
+            
+            {% if personeller %}
+                <div class="overflow-hidden">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ad Soyad</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Kullanıcı Adı</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Rol</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Telefon</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Durum</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-200">
+                            {% for personel in personeller %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{{ personel.ad }} {{ personel.soyad }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ personel.kullanici_adi }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                        {% if personel.rol == 'admin' %}bg-purple-100 text-purple-800
+                                        {% elif personel.rol == 'depo_sorumlusu' %}bg-blue-100 text-blue-800
+                                        {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ personel.rol.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ personel.email or '-' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ personel.telefon or '-' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                        {% if personel.aktif %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                        {% if personel.aktif %}Aktif{% else %}Pasif{% endif %}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                    <a href="{{ url_for('personel_duzenle', personel_id=personel.id) }}" 
+                                       class="text-slate-600 hover:text-slate-900">Düzenle</a>
+                                    {% if personel.aktif %}
+                                    <form method="POST" action="{{ url_for('personel_pasif_yap', personel_id=personel.id) }}" class="inline">
+                                        <button type="submit" 
+                                                class="text-red-600 hover:text-red-900"
+                                                onclick="return confirm('Bu kullanıcıyı pasif yapmak istediğinizden emin misiniz?')">
+                                            Pasif Yap
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <form method="POST" action="{{ url_for('personel_aktif_yap', personel_id=personel.id) }}" class="inline">
+                                        <button type="submit" 
+                                                class="text-green-600 hover:text-green-900">
+                                            Aktif Yap
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-8">
+                    <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-slate-900">Henüz kullanıcı eklenmemiş</h3>
+                    <p class="mt-1 text-sm text-slate-500">Yukarıdaki formu kullanarak ilk kullanıcınızı ekleyin.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

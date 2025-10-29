@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Minibar Takip Sistemi{% endblock %}</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS -->
+    <style>
+        /* Sidebar Transitions */
+        .sidebar-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Hamburger button visibility */
+        @media (min-width: 768px) {
+
+            /* Desktop/Tablet: Sidebar açıkken hamburger'ı gizle */
+            body:has(#sidebar.sidebar-open) #mobile-menu-button {
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+
+            /* Desktop/Tablet: Sidebar kapalıyken hamburger'ı göster */
+            body:has(#sidebar.sidebar-hidden) #mobile-menu-button {
+                opacity: 1;
+                pointer-events: auto;
+            }
+        }
+
+        /* Mobile: Hamburger her zaman görünür */
+        @media (max-width: 767px) {
+            #mobile-menu-button {
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
+        }
+
+        /* Sidebar States */
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-open {
+            transform: translateX(0);
+        }
+
+        /* Mobile: Main content full width */
+        #main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        /* Tablet/Desktop: Sidebar default açık, content kenara çekilir */
+        @media (min-width: 768px) {
+            .sidebar-hidden {
+                transform: translateX(-100%);
+            }
+
+            .sidebar-open {
+                transform: translateX(0);
+            }
+
+            /* Content sidebar açıkken kenarda */
+            #main-content {
+                margin-left: 16rem;
+                width: calc(100% - 16rem);
+                transition: margin-left 0.3s ease, width 0.3s ease;
+            }
+
+            /* Sidebar kapalıyken content tam genişlik */
+            body:has(#sidebar.sidebar-hidden) #main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        /* Overlay için smooth transition */
+        .overlay-transition {
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        /* Touch-friendly tap targets */
+        .touch-target {
+            min-height: 44px;
+            min-width: 44px;
+        }
+
+        /* Smooth scrolling */
+        .mobile-scroll {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Sidebar - Hide scrollbar */
+        nav::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        nav::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        nav::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+        }
+
+        nav::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+        }
+
+        /* Firefox scrollbar */
+        nav {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+        }
+
+        /* Z-Index ayarları */
+        #sidebar {
+            z-index: 40;
+        }
+
+        header {
+            z-index: 20;
+        }
+
+        /* Nav links - text overflow önleme */
+        nav a {
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        nav a span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Modal Notification Styles */
+        .notification-modal {
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .notification-modal.closing {
+            animation: modalSlideOut 0.3s ease-in;
+        }
+
+        @keyframes modalSlideOut {
+            from {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+        }
+
+        .notification-icon {
+            animation: iconPop 0.5s ease-out 0.2s;
+            animation-fill-mode: both;
+        }
+
+        @keyframes iconPop {
+            0% {
+                transform: scale(0);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="h-full bg-slate-50 dark:bg-slate-900">
+    <div class="flex h-full">
+        <!-- Menu Toggle Button - All Devices -->
+        <button id="mobile-menu-button"
+            class="fixed top-4 left-4 z-50 bg-white dark:bg-slate-800 p-2.5 rounded-lg shadow-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-300 hover:scale-105">
+            <svg class="w-5 h-5 text-slate-700 dark:text-slate-200" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                </path>
+            </svg>
+        </button>
+
+        <!-- Sidebar -->
+        <div id="sidebar"
+            class="fixed inset-y-0 left-0 z-40 bg-white dark:bg-slate-800 shadow-2xl sidebar-transition sidebar-open"
+            style="width: 16rem;">
+            <div class="flex flex-col h-full overflow-hidden">
+                <!-- Logo & Close Button -->
+                <div class="flex items-center justify-between h-16 px-4 bg-slate-600 dark:bg-slate-700 flex-shrink-0">
+                    <h1 class="text-xl font-bold text-white truncate">Minibar Takip</h1>
+                    <!-- Kibar Kapatma Butonu (sadece tablet/desktop) -->
+                    <button id="sidebar-close-button"
+                        class="hidden md:flex text-white hover:bg-slate-500 dark:hover:bg-slate-600 p-1.5 rounded-md transition-colors group">
+                        <svg class="w-5 h-5 transform group-hover:rotate-180 transition-transform duration-300"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto overflow-x-hidden">
+                    {% if current_user %}
+                    {% if current_user.rol == 'sistem_yoneticisi' %}
+                    <a href="{{ url_for('sistem_yoneticisi_dashboard') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+
+                    <!-- Sistem Yönetimi -->
+                    <div class="px-4 py-2">
+                        <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Sistem Yönetimi</h3>
+                    </div>
+                    <a href="{{ url_for('otel_tanimla') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                            </path>
+                        </svg>
+                        Otel Yönetimi
+                    </a>
+                    <a href="{{ url_for('kat_tanimla') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Kat Yönetimi
+                    </a>
+                    <a href="{{ url_for('oda_tanimla') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                        </svg>
+                        Oda Yönetimi
+                    </a>
+
+                    <!-- Ürün Yönetimi -->
+                    <div class="px-4 py-2 mt-4">
+                        <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Ürün Yönetimi</h3>
+                    </div>
+                    <a href="{{ url_for('urun_gruplari') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                            </path>
+                        </svg>
+                        Ürün Grupları
+                    </a>
+                    <a href="{{ url_for('urunler') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                        Ürünler
+                    </a>
+
+                    <!-- Kullanıcı Yönetimi -->
+                    <div class="px-4 py-2 mt-4">
+                        <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Kullanıcı Yönetimi</h3>
+                    </div>
+                    <a href="{{ url_for('personel_tanimla') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                            </path>
+                        </svg>
+                        Kullanıcı Yönetimi
+                    </a>
+
+                    <!-- Sistem İzleme -->
+                    <div class="px-4 py-2 mt-4">
+                        <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Sistem İzleme</h3>
+                    </div>
+                    <a href="{{ url_for('sistem_loglari') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        Sistem Logları
+                    </a>
+
+
+                    {% elif current_user.rol == 'admin' %}
+                    <!-- Admin kullanıcıları da sistem yöneticisi menüsünü kullanır -->
+                    <a href="{{ url_for('sistem_yoneticisi_dashboard') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+
+                    <!-- Sistem Yönetimi -->
+                    <div class="px-4 py-2">
+                        <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Sistem Yönetimi</h3>
+                    </div>
+                    <a href="{{ url_for('otel_tanimla') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                            </path>
+                        </svg>
+                        Otel Yönetimi
+                    </a>
+                    <a href="{{ url_for('kat_tanimla') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Kat Yönetimi
+                    </a>
+                    <a href="{{ url_for('oda_tanimla') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                        </svg>
+                        Oda Yönetimi
+                    </a>
+
+                    <!-- Ürün Yönetimi -->
+                    <div class="px-4 py-2 mt-4">
+                        <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Ürün Yönetimi</h3>
+                    </div>
+                    <a href="{{ url_for('urun_gruplari') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                            </path>
+                        </svg>
+                        Ürün Grupları
+                    </a>
+                    <a href="{{ url_for('urunler') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                        Ürünler
+                    </a>
+
+                    <!-- Kullanıcı Yönetimi -->
+                    <div class="px-4 py-2 mt-4">
+                        <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Kullanıcı Yönetimi</h3>
+                    </div>
+                    <a href="{{ url_for('personel_tanimla') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                            </path>
+                        </svg>
+                        Kullanıcı Yönetimi
+                    </a>
+
+                    <!-- Sistem İzleme -->
+                    <div class="px-4 py-2 mt-4">
+                        <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Sistem İzleme</h3>
+                    </div>
+                    <a href="{{ url_for('sistem_loglari') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        Sistem Logları
+                    </a>
+
+
+                    {% elif current_user.rol == 'depo_sorumlusu' %}
+                    <a href="{{ url_for('depo_dashboard') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="{{ url_for('stok_giris') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Stok Girişi
+                    </a>
+                    <a href="{{ url_for('personel_zimmet') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                            </path>
+                        </svg>
+                        Personel Zimmet
+                    </a>
+                    <a href="{{ url_for('minibar_durumlari') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 6h6m-6 4h6">
+                            </path>
+                        </svg>
+                        Minibar Durumları
+                    </a>
+                    <a href="{{ url_for('depo_raporlar') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                            </path>
+                        </svg>
+                        Raporlar
+                    </a>
+
+                    {% elif current_user.rol == 'kat_sorumlusu' %}
+                    <a href="{{ url_for('kat_sorumlusu_dashboard') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="{{ url_for('minibar_kontrol') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                            </path>
+                        </svg>
+                        Minibar Kontrol
+                    </a>
+                    <a href="{{ url_for('zimmetim') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                        Zimmetim
+                    </a>
+                    <a href="{{ url_for('kat_raporlar') }}"
+                        class="flex items-center px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                            </path>
+                        </svg>
+                        Raporlar
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                </nav>
+
+                <!-- User Info -->
+                {% if current_user %}
+                <div class="p-4 border-t border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
+                                <span class="text-sm font-medium text-white">
+                                    {{ current_user.ad[0] }}{{ current_user.soyad[0] }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                {{ current_user.ad }} {{ current_user.soyad }}
+                            </p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">
+                                {{ current_user.rol.replace('_', ' ').title() }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content" class="flex-1 flex flex-col w-full">
+            <!-- Top Navigation - Responsive -->
+            <header
+                class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-20">
+                <div class="flex items-center justify-between px-3 sm:px-4 py-3 gap-2">
+                    <!-- Spacer for mobile menu button -->
+                    <div class="w-12 md:hidden"></div>
+
+                    <!-- Page Title - Responsive -->
+                    <h1
+                        class="text-base sm:text-lg md:text-xl font-semibold text-slate-900 dark:text-slate-100 truncate flex-1 text-center md:text-left">
+                        {% block page_title %}Dashboard{% endblock %}
+                    </h1>
+
+                    <!-- Right side - Touch-friendly -->
+                    <div class="flex items-center space-x-2 sm:space-x-4">
+                        <!-- Theme Toggle - Touch-friendly -->
+                        <button id="theme-toggle"
+                            class="p-2 sm:p-2.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:bg-slate-700 transition-colors touch-target">
+                            <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                            </svg>
+                            <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Logout -->
+                        {% if current_user %}
+                        <!-- Logout Button - Touch-friendly -->
+                        <a href="{{ url_for('logout') }}"
+                            class="p-2 sm:p-2.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:bg-slate-700 transition-colors touch-target"
+                            title="Çıkış Yap">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                                </path>
+                            </svg>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </header>
+
+            <!-- Flash Messages (Hidden - Will be shown as modals) -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div id="flash-messages-data" style="display: none;">
+                {% for category, message in messages %}
+                <div data-category="{{ category }}" data-message="{{ message }}"></div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <!-- Page Content - Mobile optimized -->
+            <main class="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Overlay for mobile - Touch-friendly -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden overlay-transition"></div>
+
+    <!-- JavaScript -->
+    <script>
+        // Theme toggle
+        const themeToggle = document.getElementById( 'theme-toggle' );
+        const themeToggleDarkIcon = document.getElementById( 'theme-toggle-dark-icon' );
+        const themeToggleLightIcon = document.getElementById( 'theme-toggle-light-icon' );
+
+        // Check for saved theme preference or default to 'light'
+        const currentTheme = localStorage.getItem( 'theme' ) || 'light';
+
+        // Apply the current theme
+        if ( currentTheme === 'dark' ) {
+            document.documentElement.classList.add( 'dark' );
+            themeToggleLightIcon.classList.remove( 'hidden' );
+            themeToggleDarkIcon.classList.add( 'hidden' );
+        } else {
+            document.documentElement.classList.remove( 'dark' );
+            themeToggleDarkIcon.classList.remove( 'hidden' );
+            themeToggleLightIcon.classList.add( 'hidden' );
+        }
+
+        // Theme toggle event listener
+        themeToggle.addEventListener( 'click', function () {
+            if ( document.documentElement.classList.contains( 'dark' ) ) {
+                document.documentElement.classList.remove( 'dark' );
+                localStorage.setItem( 'theme', 'light' );
+                themeToggleDarkIcon.classList.remove( 'hidden' );
+                themeToggleLightIcon.classList.add( 'hidden' );
+            } else {
+                document.documentElement.classList.add( 'dark' );
+                localStorage.setItem( 'theme', 'dark' );
+                themeToggleLightIcon.classList.remove( 'hidden' );
+                themeToggleDarkIcon.classList.add( 'hidden' );
+            }
+        } );
+
+        // Sidebar Toggle
+        const menuButton = document.getElementById( 'mobile-menu-button' );
+        const closeButton = document.getElementById( 'sidebar-close-button' );
+        const sidebar = document.getElementById( 'sidebar' );
+        const sidebarOverlay = document.getElementById( 'sidebar-overlay' );
+
+        // Sidebar açma/kapama fonksiyonu
+        function toggleSidebar() {
+            const isHidden = sidebar.classList.contains( 'sidebar-hidden' );
+            const isMobile = window.innerWidth < 768;
+
+            if ( isHidden ) {
+                // Sidebar'ı aç
+                sidebar.classList.remove( 'sidebar-hidden' );
+                sidebar.classList.add( 'sidebar-open' );
+
+                // Overlay sadece mobile'da
+                if ( isMobile ) {
+                    sidebarOverlay.classList.remove( 'hidden' );
+                    document.body.style.overflow = 'hidden';
+                }
+            } else {
+                // Sidebar'ı kapat
+                sidebar.classList.add( 'sidebar-hidden' );
+                sidebar.classList.remove( 'sidebar-open' );
+                sidebarOverlay.classList.add( 'hidden' );
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Menu butonuna tıklama
+        if ( menuButton ) {
+            menuButton.addEventListener( 'click', function ( e ) {
+                e.stopPropagation();
+                toggleSidebar();
+            } );
+        }
+
+        // Sidebar kapatma butonuna tıklama (tablet/desktop)
+        if ( closeButton ) {
+            closeButton.addEventListener( 'click', function ( e ) {
+                e.stopPropagation();
+                toggleSidebar();
+            } );
+        }
+
+        // Overlay'e tıklayınca menüyü kapat
+        if ( sidebarOverlay ) {
+            sidebarOverlay.addEventListener( 'click', function () {
+                toggleSidebar();
+            } );
+        }
+
+        // Menü linklerine tıklayınca sadece mobile'da menüyü kapat
+        const menuLinks = sidebar.querySelectorAll( 'a' );
+        menuLinks.forEach( function ( link ) {
+            link.addEventListener( 'click', function () {
+                if ( window.innerWidth < 768 ) {
+                    toggleSidebar();
+                }
+            } );
+        } );
+
+        // ESC tuşu ile menüyü kapat
+        document.addEventListener( 'keydown', function ( e ) {
+            if ( e.key === 'Escape' && !sidebar.classList.contains( 'sidebar-hidden' ) ) {
+                toggleSidebar();
+            }
+        } );
+
+        // Sayfa yüklendiğinde ve ekran boyutu değiştiğinde sidebar durumunu ayarla
+        function adjustSidebarForScreenSize() {
+            const isMobile = window.innerWidth < 768;
+
+            if ( isMobile ) {
+                // Mobile: Sidebar'ı kapat
+                sidebar.classList.add( 'sidebar-hidden' );
+                sidebar.classList.remove( 'sidebar-open' );
+                sidebarOverlay.classList.add( 'hidden' );
+                document.body.style.overflow = '';
+            } else {
+                // Desktop/Tablet: Sidebar'ı aç, overlay'i kapat
+                sidebar.classList.remove( 'sidebar-hidden' );
+                sidebar.classList.add( 'sidebar-open' );
+                sidebarOverlay.classList.add( 'hidden' );
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Sayfa yüklendiğinde çalıştır
+        adjustSidebarForScreenSize();
+
+        // Ekran boyutu değiştiğinde sidebar durumunu ayarla
+        let resizeTimer;
+        window.addEventListener( 'resize', function () {
+            clearTimeout( resizeTimer );
+            resizeTimer = setTimeout( adjustSidebarForScreenSize, 100 );
+        } );
+
+        // Modern Notification System
+        function showNotification( category, message ) {
+            // Kategori ayarları
+            const config = {
+                success: {
+                    icon: `<svg class="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          </svg>`,
+                    bgColor: 'bg-green-50 dark:bg-green-900/20',
+                    borderColor: 'border-green-200 dark:border-green-800',
+                    textColor: 'text-green-800 dark:text-green-200',
+                    buttonBg: 'bg-green-600 hover:bg-green-700',
+                    title: 'Başarılı!'
+                },
+                danger: {
+                    icon: `<svg class="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          </svg>`,
+                    bgColor: 'bg-red-50 dark:bg-red-900/20',
+                    borderColor: 'border-red-200 dark:border-red-800',
+                    textColor: 'text-red-800 dark:text-red-200',
+                    buttonBg: 'bg-red-600 hover:bg-red-700',
+                    title: 'Hata!'
+                },
+                warning: {
+                    icon: `<svg class="w-16 h-16 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                          </svg>`,
+                    bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+                    borderColor: 'border-yellow-200 dark:border-yellow-800',
+                    textColor: 'text-yellow-800 dark:text-yellow-200',
+                    buttonBg: 'bg-yellow-600 hover:bg-yellow-700',
+                    title: 'Uyarı!'
+                },
+                info: {
+                    icon: `<svg class="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          </svg>`,
+                    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+                    borderColor: 'border-blue-200 dark:border-blue-800',
+                    textColor: 'text-blue-800 dark:text-blue-200',
+                    buttonBg: 'bg-blue-600 hover:bg-blue-700',
+                    title: 'Bilgi'
+                }
+            };
+
+            const settings = config[category] || config.info;
+
+            // Modal HTML oluştur
+            const modalHTML = `
+                <div id="notification-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" style="backdrop-filter: blur(4px);">
+                    <div class="notification-modal ${settings.bgColor} ${settings.borderColor} border-2 rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
+                        <!-- Kapatma butonu -->
+                        <button onclick="closeNotification()" class="absolute top-4 right-4 ${settings.textColor} opacity-50 hover:opacity-100 transition-opacity">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                        
+                        <!-- İkon -->
+                        <div class="flex justify-center mb-4 notification-icon">
+                            ${settings.icon}
+                        </div>
+                        
+                        <!-- Başlık -->
+                        <h3 class="text-2xl font-bold text-center ${settings.textColor} mb-3">
+                            ${settings.title}
+                        </h3>
+                        
+                        <!-- Mesaj -->
+                        <p class="text-center ${settings.textColor} text-lg mb-6 leading-relaxed">
+                            ${message}
+                        </p>
+                        
+                        <!-- Tamam butonu -->
+                        <button onclick="closeNotification()" class="${settings.buttonBg} text-white font-semibold py-3 px-8 rounded-lg w-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-opacity-50">
+                            Tamam
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Modal'ı sayfaya ekle
+            document.body.insertAdjacentHTML( 'beforeend', modalHTML );
+
+            // Overlay'e tıklanınca kapat
+            document.getElementById( 'notification-overlay' ).addEventListener( 'click', function ( e ) {
+                if ( e.target.id === 'notification-overlay' ) {
+                    closeNotification();
+                }
+            } );
+
+            // ESC tuşu ile kapat
+            document.addEventListener( 'keydown', function escHandler( e ) {
+                if ( e.key === 'Escape' ) {
+                    closeNotification();
+                    document.removeEventListener( 'keydown', escHandler );
+                }
+            } );
+
+            // Otomatik kapanma (5 saniye)
+            setTimeout( function () {
+                closeNotification();
+            }, 5000 );
+        }
+
+        function closeNotification() {
+            const overlay = document.getElementById( 'notification-overlay' );
+            if ( overlay ) {
+                const modal = overlay.querySelector( '.notification-modal' );
+                modal.classList.add( 'closing' );
+                setTimeout( function () {
+                    overlay.remove();
+                }, 300 );
+            }
+        }
+
+        // Sayfa yüklendiğinde flash mesajları göster
+        document.addEventListener( 'DOMContentLoaded', function () {
+            const flashData = document.getElementById( 'flash-messages-data' );
+            if ( flashData ) {
+                const messages = flashData.querySelectorAll( '[data-category]' );
+                messages.forEach( function ( msg, index ) {
+                    setTimeout( function () {
+                        showNotification( msg.dataset.category, msg.dataset.message );
+                    }, index * 400 ); // Birden fazla mesaj varsa sırayla göster
+                } );
+            }
+        } );
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

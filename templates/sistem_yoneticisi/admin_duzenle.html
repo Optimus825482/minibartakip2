@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Düzenle - Minibar Takip Sistemi{% endblock %}
+{% block page_title %}Admin Düzenle{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white dark:bg-slate-800 shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 dark:text-slate-100 mb-6">
+                Admin Bilgilerini Düzenle
+            </h3>
+            
+            <form method="POST" class="space-y-6">
+                <div>
+                    <label for="kullanici_adi" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Kullanıcı Adı <span class="text-red-500">*</span>
+                    </label>
+                    <div class="mt-1">
+                        <input id="kullanici_adi" name="kullanici_adi" type="text" required
+                               value="{{ admin.kullanici_adi }}"
+                               class="appearance-none block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm dark:bg-slate-700 dark:text-slate-100">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="ad" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Ad <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input id="ad" name="ad" type="text" required
+                                   value="{{ admin.ad }}"
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm dark:bg-slate-700 dark:text-slate-100">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="soyad" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Soyad <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input id="soyad" name="soyad" type="text" required
+                                   value="{{ admin.soyad }}"
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm dark:bg-slate-700 dark:text-slate-100">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                            E-posta
+                        </label>
+                        <div class="mt-1">
+                            <input id="email" name="email" type="email"
+                                   value="{{ admin.email or '' }}"
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm dark:bg-slate-700 dark:text-slate-100">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="telefon" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Telefon
+                        </label>
+                        <div class="mt-1">
+                            <input id="telefon" name="telefon" type="tel"
+                                   value="{{ admin.telefon or '' }}"
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm dark:bg-slate-700 dark:text-slate-100">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-200 dark:border-slate-700 pt-6">
+                    <h4 class="text-md font-medium text-slate-900 dark:text-slate-100 mb-4">
+                        Şifre Değiştir (Opsiyonel)
+                    </h4>
+                    
+                    <div>
+                        <label for="yeni_sifre" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Yeni Şifre
+                        </label>
+                        <div class="mt-1">
+                            <input id="yeni_sifre" name="yeni_sifre" type="password"
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm dark:bg-slate-700 dark:text-slate-100">
+                        </div>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Şifre değiştirmek istemiyorsanız bu alanı boş bırakın.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <a href="{{ url_for('admin_ata') }}"
+                       class="bg-white dark:bg-slate-700 py-2 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                        İptal
+                    </a>
+                    <button type="submit"
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-slate-600 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                        Güncelle
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,644 @@
+{% extends "base.html" %}
+
+{% block title %}Raporlar - Depo Sorumlusu{% endblock %}
+{% block page_title %}Raporlar{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Rapor Filtreleri -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 mb-4">Rapor Oluştur</h3>
+
+            <form method="GET" id="rapor_form" class="space-y-4">
+                <!-- Rapor Tipi -->
+                <div>
+                    <label for="rapor_tipi" class="block text-sm font-medium text-slate-700">
+                        Rapor Tipi <span class="text-red-500">*</span>
+                    </label>
+                    <div class="mt-1">
+                        <select id="rapor_tipi" name="rapor_tipi" required
+                            class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                            <option value="">Rapor tipi seçiniz...</option>
+                            <option value="stok_durum" {% if request.args.get('rapor_tipi')=='stok_durum' %}selected{%
+                                endif %}>Stok Durum Raporu</option>
+                            <option value="stok_hareket" {% if request.args.get('rapor_tipi')=='stok_hareket'
+                                %}selected{% endif %}>Stok Hareket Raporu</option>
+                            <option value="zimmet" {% if request.args.get('rapor_tipi')=='zimmet' %}selected{% endif %}>
+                                Zimmet Raporu</option>
+                            <option value="zimmet_detay" {% if request.args.get('rapor_tipi')=='zimmet_detay'
+                                %}selected{% endif %}>Ürün Bazlı Zimmet Detay</option>
+                            <option value="minibar_tuketim" {% if request.args.get('rapor_tipi')=='minibar_tuketim'
+                                %}selected{% endif %}>Minibar Tüketim Raporu</option>
+                            <option value="urun_grup" {% if request.args.get('rapor_tipi')=='urun_grup' %}selected{%
+                                endif %}>Ürün Grubu Bazlı Rapor</option>
+                            <option value="ozet" {% if request.args.get('rapor_tipi')=='ozet' %}selected{% endif %}>
+                                Genel Sistem Özeti</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <!-- Tarih Filtreleri -->
+                    <div id="tarih_filter" style="display: none;">
+                        <label for="baslangic_tarihi" class="block text-sm font-medium text-slate-700">
+                            Başlangıç Tarihi
+                        </label>
+                        <div class="mt-1">
+                            <input id="baslangic_tarihi" name="baslangic_tarihi" type="date"
+                                value="{{ request.args.get('baslangic_tarihi', '') }}"
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                        </div>
+                    </div>
+
+                    <div id="tarih_filter2" style="display: none;">
+                        <label for="bitis_tarihi" class="block text-sm font-medium text-slate-700">
+                            Bitiş Tarihi
+                        </label>
+                        <div class="mt-1">
+                            <input id="bitis_tarihi" name="bitis_tarihi" type="date"
+                                value="{{ request.args.get('bitis_tarihi', '') }}"
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Ürün Grubu Filtresi -->
+                    <div id="grup_filter" style="display: none;">
+                        <label for="urun_grup_id" class="block text-sm font-medium text-slate-700">
+                            Ürün Grubu
+                        </label>
+                        <div class="mt-1">
+                            <select id="urun_grup_id" name="urun_grup_id"
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="">Tümü</option>
+                                {% for grup in urun_gruplari %}
+                                <option value="{{ grup.id }}" {% if request.args.get('urun_grup_id')==grup.id|string
+                                    %}selected{% endif %}>{{ grup.grup_adi }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Ürün Filtresi -->
+                    <div id="urun_filter" style="display: none;">
+                        <label for="urun_id" class="block text-sm font-medium text-slate-700">
+                            Ürün
+                        </label>
+                        <div class="mt-1">
+                            <select id="urun_id" name="urun_id"
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="">Tümü</option>
+                                {% for urun in urunler %}
+                                <option value="{{ urun.id }}" {% if request.args.get('urun_id')==urun.id|string
+                                    %}selected{% endif %}>{{ urun.urun_adi }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Personel Filtresi -->
+                    <div id="personel_filter" style="display: none;">
+                        <label for="personel_id" class="block text-sm font-medium text-slate-700">
+                            Kat Sorumlusu
+                        </label>
+                        <div class="mt-1">
+                            <select id="personel_id" name="personel_id"
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="">Tümü</option>
+                                {% for personel in personeller %}
+                                <option value="{{ personel.id }}" {% if
+                                    request.args.get('personel_id')==personel.id|string %}selected{% endif %}>{{
+                                    personel.ad }} {{ personel.soyad }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Hareket Tipi Filtresi -->
+                    <div id="hareket_filter" style="display: none;">
+                        <label for="hareket_tipi" class="block text-sm font-medium text-slate-700">
+                            Hareket Tipi
+                        </label>
+                        <div class="mt-1">
+                            <select id="hareket_tipi" name="hareket_tipi"
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="">Tümü</option>
+                                <option value="giris" {% if request.args.get('hareket_tipi')=='giris' %}selected{% endif
+                                    %}>Giriş</option>
+                                <option value="cikis" {% if request.args.get('hareket_tipi')=='cikis' %}selected{% endif
+                                    %}>Çıkış</option>
+                                <option value="devir" {% if request.args.get('hareket_tipi')=='devir' %}selected{% endif
+                                    %}>Devir</option>
+                                <option value="sayim" {% if request.args.get('hareket_tipi')=='sayim' %}selected{% endif
+                                    %}>Sayım</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <a href="{{ url_for('depo_raporlar') }}"
+                        class="bg-white py-2 px-4 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                        Temizle
+                    </a>
+                    <button type="submit"
+                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        Rapor Oluştur
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Rapor Sonuçları -->
+    {% if rapor_verisi is not none %}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-slate-900">{{ rapor_baslik }}</h3>
+                <div class="flex space-x-2">
+                    <a href="{{ url_for('excel_export', rapor_tipi=rapor_tipi) }}?{{ request.query_string.decode() }}"
+                        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        Excel İndir
+                    </a>
+                    <a href="{{ url_for('pdf_export', rapor_tipi=rapor_tipi) }}?{{ request.query_string.decode() }}"
+                        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        PDF İndir
+                    </a>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+
+                {% if rapor_tipi == 'stok_durum' %}
+                <!-- Stok Durum Raporu -->
+                <div class="overflow-hidden">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Ürün</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Grup</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Birim</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Mevcut Stok</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Kritik Seviye</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-200">
+                            {% for item in rapor_verisi %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{{
+                                    item.urun.urun_adi }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{
+                                    item.urun.grup.grup_adi }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ item.urun.birim }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ item.mevcut_stok }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{
+                                    item.urun.kritik_stok_seviyesi }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if item.mevcut_stok <= item.urun.kritik_stok_seviyesi %} <span
+                                        class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                        KRİTİK
+                                        </span>
+                                        {% else %}
+                                        <span
+                                            class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            NORMAL
+                                        </span>
+                                        {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif rapor_tipi == 'stok_hareket' %}
+                <!-- Stok Hareket Raporu -->
+                <div class="overflow-hidden">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Tarih</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Ürün</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Hareket Tipi</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Miktar</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Açıklama</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    İşlem Yapan</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-200">
+                            {% for hareket in rapor_verisi %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{
+                                    hareket.islem_tarihi.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{{
+                                    hareket.urun.urun_adi }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                        {% if hareket.hareket_tipi == 'giris' %}bg-green-100 text-green-800
+                                        {% elif hareket.hareket_tipi == 'cikis' %}bg-red-100 text-red-800
+                                        {% elif hareket.hareket_tipi == 'devir' %}bg-blue-100 text-blue-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ hareket.hareket_tipi.title() }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ hareket.miktar }}</td>
+                                <td class="px-6 py-4 text-sm text-slate-500">
+                                    {{ hareket.aciklama or '-' }}
+                                    {% if hareket.zimmet_personel %}
+                                    <div class="text-xs text-blue-600 mt-1">
+                                        → <strong>{{ hareket.zimmet_personel }}</strong>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                    {% if hareket.islem_yapan %}
+                                    {{ hareket.islem_yapan.ad }} {{ hareket.islem_yapan.soyad }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif rapor_tipi == 'zimmet' %}
+                <!-- Zimmet Raporu -->
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Zimmet No</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Personel</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Zimmet Tarihi</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Ürün Sayısı</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Toplam Miktar</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Durum</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-200">
+                        {% for zimmet in rapor_verisi %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">#{{ zimmet.id }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ zimmet.personel.ad }} {{
+                                zimmet.personel.soyad }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{
+                                zimmet.zimmet_tarihi.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ zimmet.detaylar|length }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {% set toplam_miktar = zimmet.detaylar|sum(attribute='miktar') %}
+                                {{ toplam_miktar }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                    {% if zimmet.durum == 'aktif' %}bg-green-100 text-green-800
+                                    {% elif zimmet.durum == 'tamamlandi' %}bg-blue-100 text-blue-800
+                                    {% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ zimmet.durum.title() }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <a href="{{ url_for('zimmet_detay', zimmet_id=zimmet.id) }}"
+                                    class="text-slate-600 hover:text-slate-900">Detay</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% elif rapor_tipi == 'zimmet_detay' %}
+                <!-- Zimmet Detay Raporu -->
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Zimmet No</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Personel</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Tarih</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Ürün</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Grup</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Miktar</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-200">
+                        {% for detay, zimmet, kullanici, urun in rapor_verisi %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">#{{ zimmet.id }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ kullanici.ad }} {{
+                                kullanici.soyad }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{
+                                zimmet.zimmet_tarihi.strftime('%d.%m.%Y') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{{ urun.urun_adi
+                                }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ urun.grup.grup_adi }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ detay.miktar }} {{
+                                urun.birim }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                        {% if zimmet.durum == 'aktif' %}bg-green-100 text-green-800
+                                        {% elif zimmet.durum == 'tamamlandi' %}bg-blue-100 text-blue-800
+                                        {% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ zimmet.durum.title() }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% elif rapor_tipi == 'urun_grup' %}
+                <!-- Ürün Grubu Raporu -->
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Ürün Grubu</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Toplam Ürün Sayısı</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Kritik Stoklu Ürün</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-200">
+                        {% for item in rapor_verisi %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{{
+                                item.grup.grup_adi }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ item.toplam_urun }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ item.kritik_urun }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if item.kritik_urun > 0 %}
+                                <span
+                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    DİKKAT
+                                </span>
+                                {% else %}
+                                <span
+                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                    İYİ
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% elif rapor_tipi == 'minibar_tuketim' %}
+                <!-- Minibar Tüketim Raporu -->
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Tarih</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Ürün</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Grup</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Birim</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Oda</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Kat</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Tüketim</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                İşlem Tipi</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Personel</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-200">
+                        {% for kayit in rapor_verisi %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                                {{ kayit[5].strftime('%d.%m.%Y %H:%M') }}
+                            </td>
+                            <td class="px-6 py-4 text-sm font-medium text-slate-900">
+                                {{ kayit[0] }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {{ kayit[2] }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {{ kayit[1] }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {{ kayit[3] }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {{ kayit[4] }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600">
+                                {{ kayit[7] }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {% if kayit[6] == 'doldurma' %}
+                                <span
+                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                    Doldurma
+                                </span>
+                                {% elif kayit[6] == 'kontrol' %}
+                                <span
+                                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    Kontrol
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {{ kayit[8] }} {{ kayit[9] }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% elif rapor_tipi == 'ozet' %}
+                <!-- Özet Rapor -->
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="bg-white overflow-hidden shadow rounded-lg border border-slate-200">
+                        <div class="px-4 py-5 sm:p-6">
+                            <dt class="text-sm font-medium text-slate-500 truncate">
+                                Toplam Ürün Sayısı
+                            </dt>
+                            <dd class="mt-1 text-3xl font-semibold text-slate-900">
+                                {{ rapor_verisi.toplam_urun }}
+                            </dd>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg border border-slate-200">
+                        <div class="px-4 py-5 sm:p-6">
+                            <dt class="text-sm font-medium text-slate-500 truncate">
+                                Kritik Stoklu Ürün
+                            </dt>
+                            <dd class="mt-1 text-3xl font-semibold text-red-600">
+                                {{ rapor_verisi.kritik_urun }}
+                            </dd>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg border border-slate-200">
+                        <div class="px-4 py-5 sm:p-6">
+                            <dt class="text-sm font-medium text-slate-500 truncate">
+                                Aktif Zimmet
+                            </dt>
+                            <dd class="mt-1 text-3xl font-semibold text-green-600">
+                                {{ rapor_verisi.aktif_zimmet }}
+                            </dd>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg border border-slate-200">
+                        <div class="px-4 py-5 sm:p-6">
+                            <dt class="text-sm font-medium text-slate-500 truncate">
+                                Bugünkü Stok Girişi
+                            </dt>
+                            <dd class="mt-1 text-3xl font-semibold text-blue-600">
+                                {{ rapor_verisi.bugun_giris }}
+                            </dd>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg border border-slate-200">
+                        <div class="px-4 py-5 sm:p-6">
+                            <dt class="text-sm font-medium text-slate-500 truncate">
+                                Bugünkü Stok Çıkışı
+                            </dt>
+                            <dd class="mt-1 text-3xl font-semibold text-orange-600">
+                                {{ rapor_verisi.bugun_cikis }}
+                            </dd>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg border border-slate-200">
+                        <div class="px-4 py-5 sm:p-6">
+                            <dt class="text-sm font-medium text-slate-500 truncate">
+                                Bu Ayki Zimmet
+                            </dt>
+                            <dd class="mt-1 text-3xl font-semibold text-purple-600">
+                                {{ rapor_verisi.ay_zimmet }}
+                            </dd>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Rapor tipine göre filtreleri göster/gizle
+    document.getElementById( 'rapor_tipi' ).addEventListener( 'change', function () {
+        const raporTipi = this.value;
+
+        // Tüm filtreleri gizle
+        document.getElementById( 'tarih_filter' ).style.display = 'none';
+        document.getElementById( 'tarih_filter2' ).style.display = 'none';
+        document.getElementById( 'grup_filter' ).style.display = 'none';
+        document.getElementById( 'urun_filter' ).style.display = 'none';
+        document.getElementById( 'personel_filter' ).style.display = 'none';
+        document.getElementById( 'hareket_filter' ).style.display = 'none';
+
+        // Rapor tipine göre gerekli filtreleri göster
+        if ( raporTipi === 'stok_durum' ) {
+            document.getElementById( 'grup_filter' ).style.display = 'block';
+        } else if ( raporTipi === 'stok_hareket' ) {
+            document.getElementById( 'tarih_filter' ).style.display = 'block';
+            document.getElementById( 'tarih_filter2' ).style.display = 'block';
+            document.getElementById( 'grup_filter' ).style.display = 'block';
+            document.getElementById( 'urun_filter' ).style.display = 'block';
+            document.getElementById( 'hareket_filter' ).style.display = 'block';
+        } else if ( raporTipi === 'zimmet' ) {
+            document.getElementById( 'tarih_filter' ).style.display = 'block';
+            document.getElementById( 'tarih_filter2' ).style.display = 'block';
+            document.getElementById( 'personel_filter' ).style.display = 'block';
+        } else if ( raporTipi === 'zimmet_detay' ) {
+            document.getElementById( 'tarih_filter' ).style.display = 'block';
+            document.getElementById( 'tarih_filter2' ).style.display = 'block';
+            document.getElementById( 'grup_filter' ).style.display = 'block';
+            document.getElementById( 'urun_filter' ).style.display = 'block';
+            document.getElementById( 'personel_filter' ).style.display = 'block';
+        } else if ( raporTipi === 'minibar_tuketim' ) {
+            document.getElementById( 'tarih_filter' ).style.display = 'block';
+            document.getElementById( 'tarih_filter2' ).style.display = 'block';
+            document.getElementById( 'grup_filter' ).style.display = 'block';
+            document.getElementById( 'urun_filter' ).style.display = 'block';
+            document.getElementById( 'personel_filter' ).style.display = 'block';
+        }
+    } );
+
+    // Sayfa yüklendiğinde mevcut seçime göre filtreleri göster
+    document.addEventListener( 'DOMContentLoaded', function () {
+        const raporTipi = document.getElementById( 'rapor_tipi' ).value;
+        if ( raporTipi ) {
+            document.getElementById( 'rapor_tipi' ).dispatchEvent( new Event( 'change' ) );
+        }
+    } );
+</script>
+{% endblock %}

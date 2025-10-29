@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Ürünler - Minibar Takip Sistemi{% endblock %}
+{% block page_title %}Ürünler{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Ürün Ekleme Formu -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 mb-6">Yeni Ürün Ekle</h3>
+            
+            <form method="POST" class="space-y-6">
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="grup_id" class="block text-sm font-medium text-slate-700">
+                            Ürün Grubu <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <select id="grup_id" name="grup_id" required
+                                    class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="">Grup seçiniz...</option>
+                                {% for grup in gruplar %}
+                                <option value="{{ grup.id }}">{{ grup.grup_adi }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="urun_adi" class="block text-sm font-medium text-slate-700">
+                            Ürün Adı <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <input id="urun_adi" name="urun_adi" type="text" required
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                   placeholder="Ürün adı">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="barkod" class="block text-sm font-medium text-slate-700">
+                            Barkod
+                        </label>
+                        <div class="mt-1">
+                            <input id="barkod" name="barkod" type="text"
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                   placeholder="Barkod numarası">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="birim" class="block text-sm font-medium text-slate-700">
+                            Birim
+                        </label>
+                        <div class="mt-1">
+                            <select id="birim" name="birim"
+                                    class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="Adet">Adet</option>
+                                <option value="Kutu">Kutu</option>
+                                <option value="Şişe">Şişe</option>
+                                <option value="Kutu">Kutu</option>
+                                <option value="Gram">Gram</option>
+                                <option value="Kilogram">Kilogram</option>
+                                <option value="Litre">Litre</option>
+                                <option value="Mililitre">Mililitre</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="kritik_stok_seviyesi" class="block text-sm font-medium text-slate-700">
+                            Kritik Stok Seviyesi
+                        </label>
+                        <div class="mt-1">
+                            <input id="kritik_stok_seviyesi" name="kritik_stok_seviyesi" type="number" min="0" value="10"
+                                   class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit"
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                        Ürün Ekle
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mevcut Ürünler Listesi -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 mb-4">Mevcut Ürünler</h3>
+            
+            {% if urunler %}
+                <div class="overflow-hidden">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ürün Adı</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Grup</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Barkod</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Birim</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Kritik Seviye</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Durum</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-200">
+                            {% for urun in urunler %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{{ urun.urun_adi }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ urun.grup.grup_adi }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ urun.barkod or '-' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ urun.birim }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ urun.kritik_stok_seviyesi }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                        {% if urun.aktif %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                        {% if urun.aktif %}Aktif{% else %}Pasif{% endif %}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                    <a href="{{ url_for('urun_duzenle', urun_id=urun.id) }}" 
+                                       class="text-slate-600 hover:text-slate-900">Düzenle</a>
+                                    {% if urun.aktif %}
+                                    <form method="POST" action="{{ url_for('urun_pasif_yap', urun_id=urun.id) }}" class="inline">
+                                        <button type="submit" 
+                                                class="text-red-600 hover:text-red-900"
+                                                onclick="return confirm('Bu ürünü pasif yapmak istediğinizden emin misiniz?')">
+                                            Pasif Yap
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <form method="POST" action="{{ url_for('urun_aktif_yap', urun_id=urun.id) }}" class="inline">
+                                        <button type="submit" 
+                                                class="text-green-600 hover:text-green-900">
+                                            Aktif Yap
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-8">
+                    <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-slate-900">Henüz ürün eklenmemiş</h3>
+                    <p class="mt-1 text-sm text-slate-500">Yukarıdaki formu kullanarak ilk ürününüzü ekleyin.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

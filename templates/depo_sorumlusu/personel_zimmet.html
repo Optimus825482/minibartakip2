@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+
+{% block title %}Personel Zimmet - Minibar Takip Sistemi{% endblock %}
+{% block page_title %}Personel Zimmet{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Zimmet Atama Formu -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 mb-6">Kat Sorumlusuna Zimmet Ata</h3>
+
+            <form id="zimmet_form" method="POST" class="space-y-6">
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="personel_id" class="block text-sm font-medium text-slate-700">
+                            Kat Sorumlusu <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <select id="personel_id" name="personel_id" required
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                <option value="">Kat sorumlusu seçiniz...</option>
+                                {% for personel in kat_sorumlulari %}
+                                <option value="{{ personel.id }}">{{ personel.ad }} {{ personel.soyad }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="aciklama" class="block text-sm font-medium text-slate-700">
+                            Açıklama
+                        </label>
+                        <div class="mt-1">
+                            <input id="aciklama" name="aciklama" type="text"
+                                class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                placeholder="Zimmet açıklaması...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ürün Seçimi -->
+                <div>
+                    <h4 class="text-md font-medium text-slate-900 mb-4">Zimmet Edilecek Ürünler</h4>
+
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-4">
+                        <!-- Ürün Grubu Seçimi -->
+                        <div>
+                            <label for="urun_grubu" class="block text-sm font-medium text-slate-700">
+                                Ürün Grubu <span class="text-red-500">*</span>
+                            </label>
+                            <div class="mt-1">
+                                <select id="urun_grubu"
+                                    class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                    <option value="">Ürün grubu seçiniz...</option>
+                                    {% for grup in urun_gruplari %}
+                                    <option value="{{ grup.id }}">{{ grup.grup_adi }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Ürün Seçimi -->
+                        <div>
+                            <label for="urun_secim" class="block text-sm font-medium text-slate-700">
+                                Ürün <span class="text-red-500">*</span>
+                            </label>
+                            <div class="mt-1">
+                                <select id="urun_secim" disabled
+                                    class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm">
+                                    <option value="">Önce grup seçiniz...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Miktar -->
+                        <div>
+                            <label for="urun_miktar" class="block text-sm font-medium text-slate-700">
+                                Miktar <span class="text-red-500">*</span>
+                            </label>
+                            <div class="mt-1">
+                                <input type="number" id="urun_miktar" min="1" disabled
+                                    class="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+                                    placeholder="Miktar">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ürün Detay Bilgisi -->
+                    <div id="urun_detay" class="hidden mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <span class="font-medium text-slate-700">Ürün Adı:</span>
+                                <p class="text-slate-900 mt-1" id="detay_urun_adi">-</p>
+                            </div>
+                            <div>
+                                <span class="font-medium text-slate-700">Grup:</span>
+                                <p class="text-slate-900 mt-1" id="detay_grup_adi">-</p>
+                            </div>
+                            <div>
+                                <span class="font-medium text-slate-700">Mevcut Stok:</span>
+                                <p class="text-slate-900 mt-1" id="detay_mevcut_stok">
+                                    <span id="stok_miktar">-</span> <span id="stok_birim"></span>
+                                </p>
+                            </div>
+                            <div>
+                                <span class="font-medium text-slate-700">Durum:</span>
+                                <p class="mt-1">
+                                    <span id="stok_durum_badge"
+                                        class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">-</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ekle Butonu -->
+                    <div class="flex justify-end mb-4">
+                        <button type="button" id="urun_ekle_btn" disabled
+                            class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Listeye Ekle
+                        </button>
+                    </div>
+
+                    <!-- Seçilen Ürünler Listesi -->
+                    <div id="secilen_urunler_container" class="hidden">
+                        <h5 class="text-sm font-medium text-slate-900 mb-3">Seçilen Ürünler:</h5>
+                        <div class="overflow-hidden border border-slate-200 rounded-lg">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                                            Ürün Adı</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                                            Grup</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                                            Miktar</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                                            Mevcut Stok</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                                            İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="secilen_urunler_tbody" class="bg-white divide-y divide-slate-200">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden inputs for selected products -->
+                <div id="hidden_inputs"></div>
+
+                <div class="flex justify-end">
+                    <button type="submit"
+                        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                        Zimmet Ata
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Zimmetler Listesi -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-slate-900 mb-4">Atanan Zimmetler</h3>
+
+            {% if aktif_zimmetler %}
+            <div class="overflow-hidden">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Personel</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Zimmet Tarihi</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Ürün Sayısı</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                Toplam Miktar</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-200">
+                        {% for zimmet in aktif_zimmetler %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{{
+                                zimmet.personel.ad }} {{ zimmet.personel.soyad }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{
+                                zimmet.zimmet_tarihi.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{{ zimmet.detaylar|length }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                {% set toplam_miktar = zimmet.detaylar|sum(attribute='miktar') %}
+                                {{ toplam_miktar }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                                <a href="{{ url_for('zimmet_detay', zimmet_id=zimmet.id) }}"
+                                    class="text-blue-600 hover:text-blue-900">Detay</a>
+                                {% if zimmet.durum == 'aktif' %}
+                                <button
+                                    onclick="zimmetIptalEt({{ zimmet.id }}, '{{ zimmet.personel.ad }} {{ zimmet.personel.soyad }}')"
+                                    class="text-red-600 hover:text-red-900">İptal Et</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                    </path>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-slate-900">Henüz zimmet bulunmuyor</h3>
+                <p class="mt-1 text-sm text-slate-500">Yukarıdaki formu kullanarak kat sorumlusuna zimmet atayın.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    let secilenUrunler = [];
+    let mevcutUrunDetay = null;
+
+    // Ürün grubu değiştiğinde
+    document.getElementById( 'urun_grubu' ).addEventListener( 'change', async function () {
+        const grupId = this.value;
+        const urunSelect = document.getElementById( 'urun_secim' );
+        const miktarInput = document.getElementById( 'urun_miktar' );
+        const urunDetay = document.getElementById( 'urun_detay' );
+
+        // Reset
+        urunSelect.innerHTML = '<option value="">Ürün seçiniz...</option>';
+        miktarInput.value = '';
+        miktarInput.disabled = true;
+        urunDetay.classList.add( 'hidden' );
+        mevcutUrunDetay = null;
+        document.getElementById( 'urun_ekle_btn' ).disabled = true;
+
+        if ( !grupId ) {
+            urunSelect.disabled = true;
+            return;
+        }
+
+        try {
+            const response = await fetch( `/api/urunler-by-grup/${grupId}` );
+            const urunler = await response.json();
+
+            if ( urunler.length === 0 ) {
+                urunSelect.innerHTML = '<option value="">Bu grupta ürün yok</option>';
+                urunSelect.disabled = true;
+            } else {
+                urunler.forEach( urun => {
+                    const option = document.createElement( 'option' );
+                    option.value = urun.id;
+                    option.textContent = urun.urun_adi;
+                    urunSelect.appendChild( option );
+                } );
+                urunSelect.disabled = false;
+            }
+        } catch ( error ) {
+            console.error( 'Ürünler yüklenirken hata:', error );
+            alert( 'Ürünler yüklenirken bir hata oluştu!' );
+        }
+    } );
+
+    // Ürün seçildiğinde
+    document.getElementById( 'urun_secim' ).addEventListener( 'change', async function () {
+        const urunId = this.value;
+        const miktarInput = document.getElementById( 'urun_miktar' );
+        const urunDetay = document.getElementById( 'urun_detay' );
+
+        if ( !urunId ) {
+            miktarInput.disabled = true;
+            miktarInput.value = '';
+            urunDetay.classList.add( 'hidden' );
+            mevcutUrunDetay = null;
+            document.getElementById( 'urun_ekle_btn' ).disabled = true;
+            return;
+        }
+
+        try {
+            const response = await fetch( `/api/urun-stok/${urunId}` );
+            mevcutUrunDetay = await response.json();
+
+            // Detay bilgilerini göster
+            document.getElementById( 'detay_urun_adi' ).textContent = mevcutUrunDetay.urun_adi;
+            document.getElementById( 'detay_grup_adi' ).textContent = mevcutUrunDetay.grup_adi;
+            document.getElementById( 'stok_miktar' ).textContent = mevcutUrunDetay.mevcut_stok;
+            document.getElementById( 'stok_birim' ).textContent = mevcutUrunDetay.birim;
+
+            // Stok durumu badge
+            const stokBadge = document.getElementById( 'stok_durum_badge' );
+            stokBadge.textContent = mevcutUrunDetay.stok_durumu;
+            stokBadge.className = 'inline-flex px-2 py-1 text-xs font-semibold rounded-full';
+
+            if ( mevcutUrunDetay.stok_durumu === 'Yeterli' ) {
+                stokBadge.classList.add( 'bg-green-100', 'text-green-800' );
+            } else if ( mevcutUrunDetay.stok_durumu === 'Kritik' ) {
+                stokBadge.classList.add( 'bg-yellow-100', 'text-yellow-800' );
+            } else {
+                stokBadge.classList.add( 'bg-red-100', 'text-red-800' );
+            }
+
+            urunDetay.classList.remove( 'hidden' );
+            miktarInput.disabled = false;
+            miktarInput.focus();
+
+        } catch ( error ) {
+            console.error( 'Ürün stok bilgisi yüklenirken hata:', error );
+            alert( 'Ürün bilgisi yüklenirken bir hata oluştu!' );
+        }
+    } );
+
+    // Miktar değiştiğinde ekle butonunu aktif et
+    document.getElementById( 'urun_miktar' ).addEventListener( 'input', function () {
+        const miktar = parseInt( this.value );
+        const ekleBtn = document.getElementById( 'urun_ekle_btn' );
+        ekleBtn.disabled = !( miktar > 0 && mevcutUrunDetay );
+    } );
+
+    // Listeye ekle butonu
+    document.getElementById( 'urun_ekle_btn' ).addEventListener( 'click', function () {
+        const urunId = document.getElementById( 'urun_secim' ).value;
+        const miktar = parseInt( document.getElementById( 'urun_miktar' ).value );
+
+        if ( !urunId || !miktar || !mevcutUrunDetay ) {
+            return;
+        }
+
+        // Stok kontrolü
+        if ( miktar > mevcutUrunDetay.mevcut_stok ) {
+            alert( `Yetersiz stok! Mevcut stok: ${mevcutUrunDetay.mevcut_stok} ${mevcutUrunDetay.birim}` );
+            return;
+        }
+
+        // Aynı ürün daha önce eklendi mi kontrol et
+        const mevcutIndex = secilenUrunler.findIndex( u => u.id == urunId );
+        if ( mevcutIndex !== -1 ) {
+            // Ürün zaten listede, miktarı güncelle
+            const yeniMiktar = secilenUrunler[mevcutIndex].miktar + miktar;
+            if ( yeniMiktar > mevcutUrunDetay.mevcut_stok ) {
+                alert( `Yetersiz stok! Mevcut stok: ${mevcutUrunDetay.mevcut_stok} ${mevcutUrunDetay.birim}` );
+                return;
+            }
+            secilenUrunler[mevcutIndex].miktar = yeniMiktar;
+        } else {
+            // Yeni ürün ekle
+            secilenUrunler.push( {
+                id: urunId,
+                urun_adi: mevcutUrunDetay.urun_adi,
+                grup_adi: mevcutUrunDetay.grup_adi,
+                birim: mevcutUrunDetay.birim,
+                miktar: miktar,
+                mevcut_stok: mevcutUrunDetay.mevcut_stok
+            } );
+        }
+
+        // Listeyi güncelle
+        updateSecilenUrunlerTable();
+
+        // Formu sıfırla
+        document.getElementById( 'urun_grubu' ).value = '';
+        document.getElementById( 'urun_secim' ).innerHTML = '<option value="">Önce grup seçiniz...</option>';
+        document.getElementById( 'urun_secim' ).disabled = true;
+        document.getElementById( 'urun_miktar' ).value = '';
+        document.getElementById( 'urun_miktar' ).disabled = true;
+        document.getElementById( 'urun_detay' ).classList.add( 'hidden' );
+        document.getElementById( 'urun_ekle_btn' ).disabled = true;
+        mevcutUrunDetay = null;
+    } );
+
+    // Seçilen ürünler tablosunu güncelle
+    function updateSecilenUrunlerTable() {
+        const container = document.getElementById( 'secilen_urunler_container' );
+        const tbody = document.getElementById( 'secilen_urunler_tbody' );
+        const hiddenInputs = document.getElementById( 'hidden_inputs' );
+
+        if ( secilenUrunler.length === 0 ) {
+            container.classList.add( 'hidden' );
+            hiddenInputs.innerHTML = '';
+            return;
+        }
+
+        container.classList.remove( 'hidden' );
+        tbody.innerHTML = '';
+        hiddenInputs.innerHTML = '';
+
+        secilenUrunler.forEach( ( urun, index ) => {
+            // Tablo satırı
+            const tr = document.createElement( 'tr' );
+            tr.innerHTML = `
+                <td class="px-4 py-3 text-sm text-slate-900">${urun.urun_adi}</td>
+                <td class="px-4 py-3 text-sm text-slate-600">${urun.grup_adi}</td>
+                <td class="px-4 py-3 text-sm text-slate-900">${urun.miktar} ${urun.birim}</td>
+                <td class="px-4 py-3 text-sm text-slate-600">${urun.mevcut_stok} ${urun.birim}</td>
+                <td class="px-4 py-3 text-sm">
+                    <button type="button" onclick="removeUrun(${index})" 
+                        class="text-red-600 hover:text-red-900 font-medium">
+                        Sil
+                    </button>
+                </td>
+            `;
+            tbody.appendChild( tr );
+
+            // Hidden inputs for form submission
+            const hiddenUrunId = document.createElement( 'input' );
+            hiddenUrunId.type = 'hidden';
+            hiddenUrunId.name = 'urun_ids';
+            hiddenUrunId.value = urun.id;
+            hiddenInputs.appendChild( hiddenUrunId );
+
+            const hiddenMiktar = document.createElement( 'input' );
+            hiddenMiktar.type = 'hidden';
+            hiddenMiktar.name = `miktar_${urun.id}`;
+            hiddenMiktar.value = urun.miktar;
+            hiddenInputs.appendChild( hiddenMiktar );
+        } );
+    }
+
+    // Ürünü listeden kaldır
+    function removeUrun( index ) {
+        secilenUrunler.splice( index, 1 );
+        updateSecilenUrunlerTable();
+    }
+
+    // Form submit kontrolü
+    document.querySelector( 'form' ).addEventListener( 'submit', function ( e ) {
+        if ( secilenUrunler.length === 0 ) {
+            e.preventDefault();
+            alert( 'Lütfen en az bir ürün seçiniz!' );
+            return false;
+        }
+    } );
+
+    // Zimmet iptal et
+    function zimmetIptalEt( zimmetId, personelAdi ) {
+        if ( confirm( `${personelAdi} adlı personelin zimmetini iptal etmek istediğinize emin misiniz?\n\nBu işlemle:\n- Tüm zimmet iptal edilecek\n- Kullanılmayan ürünler depoya iade edilecek\n- Bu işlem geri alınamaz!` ) ) {
+            // Form oluştur ve submit et
+            const form = document.createElement( 'form' );
+            form.method = 'POST';
+            form.action = `/zimmet-iptal/${zimmetId}`;
+            document.body.appendChild( form );
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}
