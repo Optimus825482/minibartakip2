@@ -7,15 +7,25 @@ class Config:
     # Railway DATABASE_URL öncelikli (mysql:// -> mysql+pymysql://)
     DATABASE_URL = os.getenv('DATABASE_URL')
     
+    # Railway MySQL variables (fallback)
+    MYSQLHOST = os.getenv('MYSQLHOST')
+    MYSQLUSER = os.getenv('MYSQLUSER')
+    MYSQLPASSWORD = os.getenv('MYSQLPASSWORD')
+    MYSQL_DATABASE = os.getenv('MYSQL_DATABASE')
+    
     if DATABASE_URL and DATABASE_URL.startswith('mysql://'):
+        # Railway DATABASE_URL kullan
         SQLALCHEMY_DATABASE_URI = DATABASE_URL.replace('mysql://', 'mysql+pymysql://')
+    elif MYSQLHOST and MYSQLUSER:
+        # Railway MySQL variables kullan (internal connection)
+        SQLALCHEMY_DATABASE_URI = f'mysql+pymysql://{MYSQLUSER}:{MYSQLPASSWORD}@{MYSQLHOST}:3306/{MYSQL_DATABASE}?charset=utf8mb4'
     else:
-        # Local development için geleneksel yöntem
-        DB_HOST = os.getenv('DB_HOST', 'localhost')
-        DB_USER = os.getenv('DB_USER', 'root')
-        DB_PASSWORD = os.getenv('DB_PASSWORD', '')
-        DB_NAME = os.getenv('DB_NAME', 'minibar_takip')
-        DB_PORT = os.getenv('DB_PORT', '3306')
+        # Local development için .env dosyasından oku
+        DB_HOST = os.getenv('DB_HOST', os.getenv('MYSQL_HOST', 'localhost'))
+        DB_USER = os.getenv('DB_USER', os.getenv('MYSQL_USER', 'root'))
+        DB_PASSWORD = os.getenv('DB_PASSWORD', os.getenv('MYSQL_PASSWORD', ''))
+        DB_NAME = os.getenv('DB_NAME', os.getenv('MYSQL_DB', 'minibar_takip'))
+        DB_PORT = os.getenv('DB_PORT', os.getenv('MYSQL_PORT', '3306'))
         SQLALCHEMY_DATABASE_URI = f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
