@@ -1958,17 +1958,25 @@ def api_minibar_icerigi(oda_id):
 @login_required
 @role_required('kat_sorumlusu')
 def api_minibar_doldur():
-    """Tek bir ürünü minibar'a doldur"""
+    """Tek bir ürünü minibar'a doldur - YENİ VERSİYON: Gerçek stok girişi ile"""
     try:
         data = request.get_json()
         oda_id = data.get('oda_id')
         urun_id = data.get('urun_id')
-        miktar = int(data.get('miktar', 0))
+        gercek_mevcut_stok = float(data.get('gercek_mevcut_stok', 0))
+        eklenen_miktar = float(data.get('eklenen_miktar', 0))
         islem_tipi = data.get('islem_tipi', 'doldurma')
         kullanici_id = session['kullanici_id']
         
-        if not oda_id or not urun_id or miktar <= 0:
+        # Validasyon
+        if not oda_id or not urun_id:
             return jsonify({'success': False, 'error': 'Geçersiz parametreler'})
+        
+        if gercek_mevcut_stok < 0:
+            return jsonify({'success': False, 'error': 'Mevcut stok negatif olamaz'})
+            
+        if eklenen_miktar <= 0:
+            return jsonify({'success': False, 'error': 'Eklenecek miktar 0\'dan büyük olmalı'})
         
         urun = Urun.query.get(urun_id)
         if not urun:
@@ -1987,33 +1995,51 @@ def api_minibar_doldur():
             return jsonify({'success': False, 'error': f'Zimmetinizde {urun.urun_adi} bulunmuyor'})
         
         toplam_kalan = sum(d.miktar - d.kullanilan_miktar for d in zimmet_detaylar)
-        if toplam_kalan < miktar:
+        if toplam_kalan < eklenen_miktar:
             return jsonify({'success': False, 'error': f'Yetersiz zimmet! Kalan: {toplam_kalan} {urun.birim}'})
         
         # Son işlemi bul
         son_islem = MinibarIslem.query.filter_by(oda_id=oda_id).order_by(MinibarIslem.id.desc()).first()
+        
+        if not son_islem:
+            return jsonify({'success': False, 'error': 'Bu odada henüz işlem yapılmamış. Önce ilk dolum yapınız.'})
+        
+        # Son işlemdeki kayıtlı stok
+        son_detay = MinibarIslemDetay.query.filter_by(
+            islem_id=son_islem.id,
+            urun_id=urun_id
+        ).first()
+        
+        if not son_detay:
+            return jsonify({'success': False, 'error': 'Bu ürün için kayıt bulunamadı'})
+        
+        kayitli_stok = son_detay.bitis_stok if son_detay.bitis_stok is not None else 0
+        
+        # TÜKETİM HESAPLAMA (Gerçek sayım ile)
+        tuketim = max(0, kayitli_stok - gercek_mevcut_stok)
+        
+        # Yeni stok
+        yeni_stok = gercek_mevcut_stok + eklenen_miktar
         
         # Yeni işlem oluştur
         islem = MinibarIslem(
             oda_id=oda_id,
             personel_id=kullanici_id,
             islem_tipi=islem_tipi,
-            aciklama=f'{miktar} {urun.birim} {urun.urun_adi} eklendi'
+            aciklama=f'Gerçek Sayım: {gercek_mevcut_stok}, Eklenen: {eklenen_miktar}, Tüketim: {tuketim} {urun.birim} {urun.urun_adi}'
         )
         db.session.add(islem)
         db.session.flush()
         
-        # ÖNEMLİ: Önce son işlemdeki TÜM ürünleri yeni işleme kopyala
+        # ÖNEMLİ: Diğer ürünleri kopyala (değişmeden)
         if son_islem:
-            for son_detay in son_islem.detaylar:
-                # Bu ürün şimdi eklenecek ürün değilse, olduğu gibi kopyala
-                if son_detay.urun_id != urun_id:
-                    # Mevcut stok = son bitiş stoku
-                    mevcut = son_detay.bitis_stok if son_detay.bitis_stok is not None else 0
+            for son_detay_item in son_islem.detaylar:
+                if son_detay_item.urun_id != urun_id:
+                    mevcut = son_detay_item.bitis_stok if son_detay_item.bitis_stok is not None else 0
                     
                     yeni_detay = MinibarIslemDetay(
                         islem_id=islem.id,
-                        urun_id=son_detay.urun_id,
+                        urun_id=son_detay_item.urun_id,
                         baslangic_stok=mevcut,
                         bitis_stok=mevcut,
                         tuketim=0,
@@ -2022,24 +2048,8 @@ def api_minibar_doldur():
                     )
                     db.session.add(yeni_detay)
         
-        # Şimdi eklenen ürün için işlem yap
-        if son_islem:
-            # Son işlemdeki bu ürünün stoğunu bul
-            son_detay = MinibarIslemDetay.query.filter_by(
-                islem_id=son_islem.id,
-                urun_id=urun_id
-            ).first()
-            
-            if son_detay:
-                # Başlangıç = önceki bitiş
-                baslangic_stok = son_detay.bitis_stok if son_detay.bitis_stok is not None else 0
-            else:
-                baslangic_stok = 0
-        else:
-            baslangic_stok = 0
-        
         # Zimmetten düş (FIFO)
-        kalan_miktar = miktar
+        kalan_miktar = eklenen_miktar
         kullanilan_zimmet_id = None
         
         for zimmet_detay in zimmet_detaylar:
@@ -2057,14 +2067,13 @@ def api_minibar_doldur():
                     kullanilan_zimmet_id = zimmet_detay.id
         
         # Eklenen ürün için minibar detayı kaydet
-        # Başlangıç = önceki bitiş, Eklenen = zimmetinden alınan, Bitiş = başlangıç + eklenen
         detay = MinibarIslemDetay(
             islem_id=islem.id,
             urun_id=urun_id,
-            baslangic_stok=baslangic_stok,
-            bitis_stok=baslangic_stok + miktar,
-            tuketim=0,
-            eklenen_miktar=miktar,
+            baslangic_stok=gercek_mevcut_stok,  # Gerçek sayım
+            bitis_stok=yeni_stok,  # Gerçek + eklenen
+            tuketim=tuketim,  # Kayıtlı - gerçek
+            eklenen_miktar=eklenen_miktar,
             zimmet_detay_id=kullanilan_zimmet_id
         )
         db.session.add(detay)
@@ -2072,8 +2081,9 @@ def api_minibar_doldur():
         
         return jsonify({
             'success': True,
-            'message': f'{miktar} {urun.birim} {urun.urun_adi} başarıyla eklendi',
-            'yeni_stok': baslangic_stok + miktar
+            'message': f'✅ Başarılı!\n\nTüketim: {tuketim} {urun.birim}\nEklenen: {eklenen_miktar} {urun.birim}\nYeni Stok: {yeni_stok} {urun.birim}',
+            'yeni_stok': yeni_stok,
+            'tuketim': tuketim
         })
         
     except Exception as e:
