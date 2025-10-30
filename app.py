@@ -1993,20 +1993,6 @@ def api_minibar_doldur():
         # Son işlemi bul
         son_islem = MinibarIslem.query.filter_by(oda_id=oda_id).order_by(MinibarIslem.id.desc()).first()
         
-        if son_islem:
-            # Son işlemdeki bu ürünün stoğunu bul
-            son_detay = MinibarIslemDetay.query.filter_by(
-                islem_id=son_islem.id,
-                urun_id=urun_id
-            ).first()
-            
-            if son_detay:
-                baslangic_stok = son_detay.bitis_stok if son_detay.bitis_stok > 0 else (son_detay.baslangic_stok + son_detay.eklenen_miktar - son_detay.tuketim)
-            else:
-                baslangic_stok = 0
-        else:
-            baslangic_stok = 0
-        
         # Yeni işlem oluştur
         islem = MinibarIslem(
             oda_id=oda_id,
@@ -2016,6 +2002,41 @@ def api_minibar_doldur():
         )
         db.session.add(islem)
         db.session.flush()
+        
+        # ÖNEMLİ: Önce son işlemdeki TÜM ürünleri yeni işleme kopyala
+        if son_islem:
+            for son_detay in son_islem.detaylar:
+                # Bu ürün şimdi eklenecek ürün değilse, olduğu gibi kopyala
+                if son_detay.urun_id != urun_id:
+                    # Mevcut stok = son bitiş stoku
+                    mevcut = son_detay.bitis_stok if son_detay.bitis_stok is not None else 0
+                    
+                    yeni_detay = MinibarIslemDetay(
+                        islem_id=islem.id,
+                        urun_id=son_detay.urun_id,
+                        baslangic_stok=mevcut,
+                        bitis_stok=mevcut,
+                        tuketim=0,
+                        eklenen_miktar=0,
+                        zimmet_detay_id=None
+                    )
+                    db.session.add(yeni_detay)
+        
+        # Şimdi eklenen ürün için işlem yap
+        if son_islem:
+            # Son işlemdeki bu ürünün stoğunu bul
+            son_detay = MinibarIslemDetay.query.filter_by(
+                islem_id=son_islem.id,
+                urun_id=urun_id
+            ).first()
+            
+            if son_detay:
+                # Başlangıç = önceki bitiş
+                baslangic_stok = son_detay.bitis_stok if son_detay.bitis_stok is not None else 0
+            else:
+                baslangic_stok = 0
+        else:
+            baslangic_stok = 0
         
         # Zimmetten düş (FIFO)
         kalan_miktar = miktar
@@ -2035,7 +2056,8 @@ def api_minibar_doldur():
                 if not kullanilan_zimmet_id:
                     kullanilan_zimmet_id = zimmet_detay.id
         
-        # Minibar detayı kaydet
+        # Eklenen ürün için minibar detayı kaydet
+        # Başlangıç = önceki bitiş, Eklenen = zimmetinden alınan, Bitiş = başlangıç + eklenen
         detay = MinibarIslemDetay(
             islem_id=islem.id,
             urun_id=urun_id,
