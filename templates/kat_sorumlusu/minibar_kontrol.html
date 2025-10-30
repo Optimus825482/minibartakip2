@@ -512,8 +512,8 @@
                 return;
             }
 
-            // Zimmet kontrolü (doldurma işleminde)
-            if ( islemTipi === 'doldurma' ) {
+            // Zimmet kontrolü (ilk_dolum ve doldurma işlemlerinde)
+            if ( islemTipi === 'ilk_dolum' || islemTipi === 'doldurma' ) {
                 const zimmetInfo = mevcutZimmetler[urunId];
                 if ( !zimmetInfo || zimmetInfo.kalan < miktar ) {
                     const kalanMiktar = zimmetInfo ? zimmetInfo.kalan : 0;
