@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}⚠️ Sistem Sıfırlama - Otel Minibar Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900 flex items-center justify-center p-4">
+    <div class="max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-red-600 text-white px-8 py-6">
+            <div class="flex items-center space-x-4">
+                <div class="bg-white/20 p-3 rounded-full">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                        </path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold">⚠️ SİSTEM SIFIRLAMA</h1>
+                    <p class="text-red-100 mt-1">Tüm veriler silinecek ve sistem ilk kuruluma dönecek</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-8">
+            {% if not show_stats %}
+            <!-- Şifre Girişi -->
+            <div class="space-y-6">
+                <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded">
+                    <div class="flex items-start space-x-3">
+                        <svg class="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                            </path>
+                        </svg>
+                        <div>
+                            <h3 class="text-lg font-bold text-red-800 mb-2">⛔ UYARI - GERİ DÖNÜŞÜ OLMAYAN İŞLEM</h3>
+                            <p class="text-red-700 text-sm leading-relaxed">
+                                Bu işlem sistemdeki <strong>TÜM VERİLERİ SİLECEK</strong> ve sistemi ilk kurulum
+                                aşamasına döndürecektir.
+                                Bu işlem <strong class="text-red-900">GERİ ALINAMAZ</strong>!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ url_for('reset_system') }}" class="space-y-6">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            🔐 Sistem Sıfırlama Şifresi
+                        </label>
+                        <input type="password" name="reset_password" required
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring-2 focus:ring-red-200 transition"
+                            placeholder="Özel sıfırlama şifresini girin">
+                        <p class="text-xs text-gray-500 mt-2">
+                            ℹ️ Bu şifre sistem yöneticisi tarafından belirlenen özel bir şifredir.
+                        </p>
+                    </div>
+
+                    <div class="flex space-x-4">
+                        <button type="submit" name="action" value="check"
+                            class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg transition transform hover:scale-105 shadow-lg">
+                            🔍 İstatistikleri Göster
+                        </button>
+                        <a href="{{ url_for('index') }}"
+                            class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition text-center">
+                            ← İptal Et
+                        </a>
+                    </div>
+                </form>
+
+                <!-- Bilgilendirme -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-bold text-blue-900 mb-2">📋 Silinecek Veriler:</h4>
+                    <ul class="text-sm text-blue-800 space-y-1 ml-4">
+                        <li>• Tüm kullanıcı hesapları (Sistem Yöneticisi dahil)</li>
+                        <li>• Otel, kat ve oda tanımları</li>
+                        <li>• Ürün grupları ve ürünler</li>
+                        <li>• Tüm stok kayıtları ve hareketleri</li>
+                        <li>• Personel zimmet kayıtları</li>
+                        <li>• Minibar işlem geçmişi</li>
+                        <li>• Sistem logları ve audit trail</li>
+                        <li>• Hata kayıtları</li>
+                        <li>• Otomatik rapor ayarları</li>
+                    </ul>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- İstatistikler ve Onay -->
+            <div class="space-y-6">
+                <!-- İstatistik Kartları -->
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-4 rounded-lg shadow">
+                        <div class="text-3xl font-bold">{{ stats.kullanici_sayisi }}</div>
+                        <div class="text-sm text-red-100">Kullanıcı</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-4 rounded-lg shadow">
+                        <div class="text-3xl font-bold">{{ stats.otel_sayisi }}</div>
+                        <div class="text-sm text-orange-100">Otel</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-4 rounded-lg shadow">
+                        <div class="text-3xl font-bold">{{ stats.kat_sayisi }}</div>
+                        <div class="text-sm text-yellow-100">Kat</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-4 rounded-lg shadow">
+                        <div class="text-3xl font-bold">{{ stats.oda_sayisi }}</div>
+                        <div class="text-sm text-green-100">Oda</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 rounded-lg shadow">
+                        <div class="text-3xl font-bold">{{ stats.urun_sayisi }}</div>
+                        <div class="text-sm text-blue-100">Ürün</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-lg shadow">
+                        <div class="text-3xl font-bold">{{ stats.stok_hareket_sayisi }}</div>
+                        <div class="text-sm text-purple-100">Stok Hareketi</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-pink-500 to-pink-600 text-white p-4 rounded-lg shadow">
+                        <div class="text-3xl font-bold">{{ stats.zimmet_sayisi }}</div>
+                        <div class="text-sm text-pink-100">Zimmet Kaydı</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-4 rounded-lg shadow">
+                        <div class="text-3xl font-bold">{{ stats.minibar_islem_sayisi }}</div>
+                        <div class="text-sm text-indigo-100">Minibar İşlemi</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-gray-500 to-gray-600 text-white p-4 rounded-lg shadow">
+                        <div class="text-3xl font-bold">{{ stats.log_sayisi }}</div>
+                        <div class="text-sm text-gray-100">Sistem Logu</div>
+                    </div>
+                </div>
+
+                <!-- Uyarı Mesajı -->
+                <div class="bg-red-100 border-2 border-red-500 rounded-lg p-6">
+                    <div class="flex items-start space-x-3">
+                        <svg class="w-8 h-8 text-red-600 flex-shrink-0" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                            </path>
+                        </svg>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-red-900 mb-3">🔴 SON UYARI - VERİLER SİLİNECEK!</h3>
+                            <div class="bg-white rounded-lg p-4 mb-4">
+                                <p class="text-red-800 font-semibold mb-2">Yukarıdaki TÜM veriler kalıcı olarak
+                                    silinecektir:</p>
+                                <ul class="text-sm text-red-700 space-y-1 ml-4">
+                                    <li>✗ <strong>{{ stats.kullanici_sayisi }}</strong> kullanıcı hesabı</li>
+                                    <li>✗ <strong>{{ stats.otel_sayisi }}</strong> otel, <strong>{{ stats.kat_sayisi
+                                            }}</strong> kat, <strong>{{ stats.oda_sayisi }}</strong> oda tanımı</li>
+                                    <li>✗ <strong>{{ stats.urun_grubu_sayisi }}</strong> ürün grubu ve <strong>{{
+                                            stats.urun_sayisi }}</strong> ürün</li>
+                                    <li>✗ <strong>{{ stats.stok_hareket_sayisi }}</strong> stok hareket kaydı</li>
+                                    <li>✗ <strong>{{ stats.zimmet_sayisi }}</strong> zimmet ve <strong>{{
+                                            stats.zimmet_detay_sayisi }}</strong> detay kaydı</li>
+                                    <li>✗ <strong>{{ stats.minibar_islem_sayisi }}</strong> minibar işlemi ve <strong>{{
+                                            stats.minibar_detay_sayisi }}</strong> detay</li>
+                                    <li>✗ <strong>{{ stats.log_sayisi }}</strong> sistem logu</li>
+                                    <li>✗ <strong>{{ stats.audit_sayisi }}</strong> audit trail kaydı</li>
+                                    <li>✗ <strong>{{ stats.hata_sayisi }}</strong> hata kaydı</li>
+                                </ul>
+                            </div>
+                            <p class="text-red-900 font-bold text-lg">
+                                ⚠️ Bu işlem <span class="underline">GERİ ALINAMAZ</span>! Devam etmek istediğinizden
+                                emin misiniz?
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Onay Formu -->
+                <form method="POST" action="{{ url_for('reset_system') }}" class="space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="reset_password" value="{{ password }}" />
+
+                    <!-- Onay Checkbox -->
+                    <div class="bg-white border-2 border-red-500 rounded-lg p-6">
+                        <label class="flex items-start space-x-3 cursor-pointer">
+                            <input type="checkbox" name="confirm_reset" required
+                                class="mt-1 w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                            <span class="text-gray-900 font-semibold">
+                                Yukarıdaki tüm verilerin kalıcı olarak silineceğini ve bu işlemin geri alınamayacağını
+                                anladım.
+                                Sistemin ilk kurulum aşamasına döneceğini kabul ediyorum.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="flex space-x-4">
+                        <button type="submit" name="action" value="reset"
+                            onclick="return confirm('🔴 SON ONAY: Tüm veriler silinecek ve sistem sıfırlanacak. Devam etmek istediğinizden EMİN MİSİNİZ?')"
+                            class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-lg transition transform hover:scale-105 shadow-lg">
+                            🗑️ SİSTEMİ SIFIRLA (GERİ DÖNÜŞÜ YOK!)
+                        </button>
+                        <a href="{{ url_for('index') }}"
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg transition text-center">
+                            ✓ İptal Et (Güvenli Çıkış)
+                        </a>
+                    </div>
+                </form>
+
+                <div class="text-center text-sm text-gray-500">
+                    <p>💡 İptal ederseniz hiçbir veri silinmeyecektir.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-100 px-8 py-4 border-t">
+            <div class="flex items-center justify-between text-sm text-gray-600">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                        </path>
+                    </svg>
+                    <span>Güvenli Sistem Sıfırlama</span>
+                </div>
+                <div>
+                    Otel Minibar Takip Sistemi v1.0
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

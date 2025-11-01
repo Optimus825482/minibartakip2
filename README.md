@@ -107,24 +107,44 @@ prof/
 ├── app.py                  # Ana Flask uygulaması
 ├── config.py              # Konfigürasyon ayarları
 ├── models.py              # Veritabanı modelleri
+├── forms.py               # Form tanımlamaları
 ├── init_db.py             # Veritabanı başlatma scripti
 ├── requirements.txt       # Python bağımlılıkları
 ├── Procfile              # Railway/Heroku deploy komutu
 ├── railway.json          # Railway konfigürasyonu
 ├── runtime.txt           # Python versiyonu
 ├── .gitignore            # Git ignore kuralları
+├── docs/                 # 📚 Dokümantasyon (detaylı kılavuzlar)
+│   ├── README.md         # Dokümantasyon indeksi
+│   ├── KULLANIM_KLAVUZU_BOLUM_1.md
+│   ├── KULLANIM_KLAVUZU_BOLUM_2.md
+│   ├── KULLANIM_KLAVUZU_BOLUM_3.md
+│   ├── akis_sema.md      # 14 akış diyagramı
+│   ├── SISTEM_SIFIRLAMA_KILAVUZU.md
+│   ├── SILME_SIRASI.md
+│   ├── TABLO_ISIMLERI.md
+│   └── ... (daha fazla)
 ├── templates/            # HTML şablonları
 │   ├── base.html
 │   ├── login.html
 │   ├── setup.html
+│   ├── reset_system.html  # Sistem sıfırlama
 │   ├── admin/
 │   ├── depo_sorumlusu/
 │   ├── kat_sorumlusu/
 │   ├── sistem_yoneticisi/
 │   └── errors/
-└── utils/                # Yardımcı modüller
-    ├── decorators.py
-    └── helpers.py
+├── static/               # Statik dosyalar
+│   ├── js/
+│   ├── icons/
+│   ├── manifest.json
+│   └── service-worker.js
+├── utils/                # Yardımcı modüller
+│   ├── audit.py          # Audit trail
+│   ├── decorators.py
+│   └── helpers.py
+└── tests/                # Test dosyaları
+    └── test_config.py
 ```
 
 ## 👥 Kullanıcı Rolleri
@@ -158,13 +178,34 @@ prof/
 3. Otel bilgileri ve Sistem Yöneticisi oluşturun
 4. Giriş yapın ve diğer kullanıcıları ekleyin
 
-## 📊 Raporlar
+## � Sistem Sıfırlama
+
+Sistemi tamamen sıfırlamak ve ilk kuruluma dönmek için:
+
+- **URL**: `/resetsystem`
+- **Özel Şifre**: `518518Erkan!`
+- **İşlev**: Tüm veritabanı tablolarını temizler ve sistemi ilk kuruluma döndürür
+
+⚠️ **UYARI**: Bu işlem geri alınamaz! Tüm veriler silinir.
+
+📖 Detaylı bilgi için: [docs/SISTEM_SIFIRLAMA_KILAVUZU.md](docs/SISTEM_SIFIRLAMA_KILAVUZU.md)
+
+## �📊 Raporlar
 
 - **Stok Durum Raporu**: Mevcut stok durumu
 - **Stok Hareket Raporu**: Tüm stok hareketleri
 - **Zimmet Raporu**: Personel zimmet durumu
 - **Minibar Tüketim Raporu**: Oda bazlı tüketim analizi
 - **Ürün Grubu Raporu**: Grup bazlı istatistikler
+
+## 📚 Detaylı Dokümantasyon
+
+Sistem hakkında detaylı bilgi için **[docs/](docs/)** klasörüne bakın:
+
+- 📖 **4 Bölümlük Kullanım Kılavuzu** (2750+ satır)
+- 📊 **14 Akış Diyagramı** (Mermaid format)
+- 🔧 **Teknik Dokümantasyon** (Veritabanı, API, Template)
+- ⚙️ **Sistem Yönetimi** (Sıfırlama, Backup, Deployment)
 
 ## 🔧 Teknolojiler
 

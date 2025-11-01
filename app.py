@@ -3972,6 +3972,183 @@ def audit_trail_export():
     )
 
 
+# ============================================================================
+# SİSTEM SIFIRLAMA - ÖZEL ŞİFRE İLE KORUMALI
+# ============================================================================
+
+RESET_PASSWORD = "518518Erkan!"  # Özel sistem sıfırlama şifresi
+
+@app.route('/resetsystem', methods=['GET', 'POST'])
+@csrf.exempt  # CSRF korumasını kaldır (kendi validasyonumuz var)
+def reset_system():
+    """Sistem sıfırlama sayfası - Özel şifre ile korumalı"""
+    
+    if request.method == 'GET':
+        # Şifre giriş sayfasını göster
+        return render_template('reset_system.html', show_stats=False)
+    
+    # POST işlemi
+    action = request.form.get('action')
+    reset_password = request.form.get('reset_password', '')
+    
+    # Şifre kontrolü
+    if reset_password != RESET_PASSWORD:
+        flash('❌ Hatalı sistem sıfırlama şifresi!', 'error')
+        return render_template('reset_system.html', show_stats=False)
+    
+    # İstatistikleri göster
+    if action == 'check':
+        try:
+            stats = {
+                'kullanici_sayisi': Kullanici.query.count(),
+                'otel_sayisi': Otel.query.count(),
+                'kat_sayisi': Kat.query.count(),
+                'oda_sayisi': Oda.query.count(),
+                'urun_grubu_sayisi': UrunGrup.query.count(),
+                'urun_sayisi': Urun.query.count(),
+                'stok_hareket_sayisi': StokHareket.query.count(),
+                'zimmet_sayisi': PersonelZimmet.query.count(),
+                'zimmet_detay_sayisi': PersonelZimmetDetay.query.count(),
+                'minibar_islem_sayisi': MinibarIslem.query.count(),
+                'minibar_detay_sayisi': MinibarIslemDetay.query.count(),
+                'log_sayisi': SistemLog.query.count(),
+                'hata_sayisi': HataLog.query.count(),
+                'audit_sayisi': db.session.execute(db.text("SELECT COUNT(*) FROM audit_logs")).scalar() or 0
+            }
+            
+            return render_template('reset_system.html', 
+                                 show_stats=True, 
+                                 stats=stats,
+                                 password=reset_password)
+        
+        except Exception as e:
+            flash(f'❌ İstatistikler alınırken hata: {str(e)}', 'error')
+            return render_template('reset_system.html', show_stats=False)
+    
+    # Sistem sıfırlama işlemi
+    elif action == 'reset':
+        # Onay checkbox kontrolü
+        if not request.form.get('confirm_reset'):
+            flash('❌ Sıfırlama onayı verilmedi!', 'error')
+            return redirect(url_for('reset_system'))
+        
+        try:
+            # Tüm tabloları temizle (sıralama önemli - foreign key kısıtları)
+            print("\n" + "="*60)
+            print("🔴 SİSTEM SIFIRLAMA BAŞLADI")
+            print("="*60)
+            
+            # 1. MinibarIslemDetay (foreign key: minibar_islemleri)
+            count = db.session.execute(db.text("DELETE FROM minibar_islem_detay")).rowcount
+            print(f"✓ MinibarIslemDetay silindi: {count} kayıt")
+            
+            # 2. MinibarIslem
+            count = db.session.execute(db.text("DELETE FROM minibar_islemleri")).rowcount
+            print(f"✓ MinibarIslem silindi: {count} kayıt")
+            
+            # 3. PersonelZimmetDetay (foreign key: personel_zimmet)
+            count = db.session.execute(db.text("DELETE FROM personel_zimmet_detay")).rowcount
+            print(f"✓ PersonelZimmetDetay silindi: {count} kayıt")
+            
+            # 4. PersonelZimmet
+            count = db.session.execute(db.text("DELETE FROM personel_zimmet")).rowcount
+            print(f"✓ PersonelZimmet silindi: {count} kayıt")
+            
+            # 5. StokHareket
+            count = db.session.execute(db.text("DELETE FROM stok_hareketleri")).rowcount
+            print(f"✓ StokHareket silindi: {count} kayıt")
+            
+            # 6. Urun (foreign key: urun_gruplari)
+            count = db.session.execute(db.text("DELETE FROM urunler")).rowcount
+            print(f"✓ Urun silindi: {count} kayıt")
+            
+            # 7. UrunGrup
+            count = db.session.execute(db.text("DELETE FROM urun_gruplari")).rowcount
+            print(f"✓ UrunGrup silindi: {count} kayıt")
+            
+            # 8. Oda (foreign key: katlar)
+            count = db.session.execute(db.text("DELETE FROM odalar")).rowcount
+            print(f"✓ Oda silindi: {count} kayıt")
+            
+            # 9. Kat (foreign key: oteller)
+            count = db.session.execute(db.text("DELETE FROM katlar")).rowcount
+            print(f"✓ Kat silindi: {count} kayıt")
+            
+            # 10. LOG VE AUDIT TABLOLARI ÖNCE SİLİNMELİ (foreign key: kullanicilar)
+            # SistemLog
+            count = db.session.execute(db.text("DELETE FROM sistem_loglari")).rowcount
+            print(f"✓ SistemLog silindi: {count} kayıt")
+            
+            # HataLog
+            count = db.session.execute(db.text("DELETE FROM hata_loglari")).rowcount
+            print(f"✓ HataLog silindi: {count} kayıt")
+            
+            # AuditLog (kullanıcılara foreign key var!)
+            count = db.session.execute(db.text("DELETE FROM audit_logs")).rowcount
+            print(f"✓ AuditLog silindi: {count} kayıt")
+            
+            # 11. OtomatikRapor (kullanıcılara foreign key olabilir)
+            count = db.session.execute(db.text("DELETE FROM otomatik_raporlar")).rowcount
+            print(f"✓ OtomatikRapor silindi: {count} kayıt")
+            
+            # 12. ARTIK KULLANICILARı SİLEBİLİRİZ
+            # Kullanici (foreign key: oteller)
+            count = db.session.execute(db.text("DELETE FROM kullanicilar")).rowcount
+            print(f"✓ Kullanici silindi: {count} kayıt")
+            
+            # 13. Otel
+            count = db.session.execute(db.text("DELETE FROM oteller")).rowcount
+            print(f"✓ Otel silindi: {count} kayıt")
+            
+            # 14. SistemAyar - setup_tamamlandi'yi sıfırla
+            db.session.execute(db.text("DELETE FROM sistem_ayarlari WHERE anahtar = 'setup_tamamlandi'"))
+            print(f"✓ Setup ayarı sıfırlandı")
+            
+            # Auto-increment değerlerini sıfırla
+            tables = [
+                'minibar_islem_detay', 'minibar_islemleri',
+                'personel_zimmet_detay', 'personel_zimmet',
+                'stok_hareketleri', 'urunler', 'urun_gruplari',
+                'odalar', 'katlar', 'kullanicilar', 'oteller',
+                'sistem_loglari', 'hata_loglari', 'audit_logs', 'otomatik_raporlar'
+            ]
+            
+            for table in tables:
+                try:
+                    db.session.execute(db.text(f"ALTER TABLE {table} AUTO_INCREMENT = 1"))
+                except:
+                    pass  # Bazı tablolar primary key olmayabilir
+            
+            print(f"✓ Auto-increment değerleri sıfırlandı")
+            
+            # Commit
+            db.session.commit()
+            
+            print("="*60)
+            print("✅ SİSTEM SIFIRLAMA TAMAMLANDI")
+            print("="*60)
+            print()
+            
+            # Session'ı temizle
+            session.clear()
+            
+            # Başarı mesajı ve yönlendirme
+            flash('✅ Sistem başarıyla sıfırlandı! Tüm veriler silindi ve sistem ilk kurulum aşamasına döndü.', 'success')
+            flash('🔄 Şimdi ilk kurulum sayfasına yönlendiriliyorsunuz...', 'info')
+            
+            return redirect(url_for('setup'))
+        
+        except Exception as e:
+            db.session.rollback()
+            print(f"\n❌ HATA: {str(e)}\n")
+            flash(f'❌ Sistem sıfırlanırken hata oluştu: {str(e)}', 'error')
+            return redirect(url_for('reset_system'))
+    
+    # Geçersiz action
+    flash('❌ Geçersiz işlem!', 'error')
+    return redirect(url_for('reset_system'))
+
+
 # Hata yakalama
 @app.errorhandler(404)
 def not_found(error):
