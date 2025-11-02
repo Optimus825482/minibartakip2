@@ -205,17 +205,20 @@
 <script>
     // TableSearchFilter - Son Minibar İşlemleri
     {% if son_islemler %}
-    new TableSearchFilter( 'son-minibar-islemler-table', {
-        searchPlaceholder: 'Minibar işlemlerinde ara (oda, açıklama)...',
-        filters: [
-            {
-                column: 1, // İşlem Tipi
-                label: 'İşlem Tipi',
-                type: 'badge'
-            }
-        ],
-        defaultItemsPerPage: 10
-    } );
+    const minibarIslemlerTable = document.getElementById( 'son-minibar-islemler-table' );
+    if ( minibarIslemlerTable ) {
+        new TableSearchFilter( 'son-minibar-islemler-table', {
+            searchPlaceholder: 'Minibar işlemlerinde ara (oda, açıklama)...',
+            filters: [
+                {
+                    columnIndex: 1, // İşlem Tipi
+                    label: 'İşlem Tipi',
+                    type: 'badge'
+                }
+            ],
+            defaultItemsPerPage: 10
+        } );
+    }
     {% endif %}
 </script>
 {% endblock %}

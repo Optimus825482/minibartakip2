@@ -303,38 +303,47 @@
     {% if rapor_verisi %}
     {% if rapor_tipi == 'minibar_islem' %}
     // TableSearchFilter - Minibar İşlem Raporu
-    new TableSearchFilter( 'minibar-islem-rapor-table', {
-        searchPlaceholder: 'Minibar işlemlerinde ara (oda, açıklama)...',
-        filters: [
-            {
-                column: 2, // İşlem Tipi
-                label: 'İşlem Tipi',
-                type: 'badge'
-            }
-        ],
-        defaultItemsPerPage: 25
-    } );
+    const minibarIslemTable = document.getElementById( 'minibar-islem-rapor-table' );
+    if ( minibarIslemTable ) {
+        new TableSearchFilter( 'minibar-islem-rapor-table', {
+            searchPlaceholder: 'Minibar işlemlerinde ara (oda, açıklama)...',
+            filters: [
+                {
+                    columnIndex: 2, // İşlem Tipi
+                    label: 'İşlem Tipi',
+                    type: 'badge'
+                }
+            ],
+            defaultItemsPerPage: 25
+        } );
+    }
 
     {% elif rapor_tipi == 'tuketim' %}
     // TableSearchFilter - Tüketim Raporu
-    new TableSearchFilter( 'tuketim-rapor-table', {
-        searchPlaceholder: 'Ürünlerde ara (ürün adı, grup, birim)...',
-        filters: [
-            {
-                column: 1, // Grup
-                label: 'Grup',
-                type: 'badge'
-            }
-        ],
-        defaultItemsPerPage: 25
-    } );
+    const tuketimTable = document.getElementById( 'tuketim-rapor-table' );
+    if ( tuketimTable ) {
+        new TableSearchFilter( 'tuketim-rapor-table', {
+            searchPlaceholder: 'Ürünlerde ara (ürün adı, grup, birim)...',
+            filters: [
+                {
+                    columnIndex: 1, // Grup
+                    label: 'Grup',
+                    type: 'badge'
+                }
+            ],
+            defaultItemsPerPage: 25
+        } );
+    }
 
     {% elif rapor_tipi == 'oda_bazli' %}
     // TableSearchFilter - Oda Bazlı Rapor
-    new TableSearchFilter( 'oda-bazli-rapor-table', {
-        searchPlaceholder: 'Odalarda ara (oda no, kat)...',
-        defaultItemsPerPage: 25
-    } );
+    const odaBazliTable = document.getElementById( 'oda-bazli-rapor-table' );
+    if ( odaBazliTable ) {
+        new TableSearchFilter( 'oda-bazli-rapor-table', {
+            searchPlaceholder: 'Odalarda ara (oda no, kat)...',
+            defaultItemsPerPage: 25
+        } );
+    }
     {% endif %}
     {% endif %}
 </script>

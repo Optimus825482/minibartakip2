@@ -112,22 +112,20 @@
         {% endfor %}
         ];
 
-    window.tableSearchFilter_odalar = new TableSearchFilter( {
-        tableId: 'odalar-table',
-        searchInputId: 'odalar-search',
-        searchPlaceholder: 'Oda numarası veya kat ara...',
-        defaultItemsPerPage: 50,
-        itemsPerPageOptions: [25, 50, 100, 200],
-        noResultsMessage: 'Aradığınız kriterlere uygun oda bulunamadı',
-        filters: [
-            {
-                column: 1,
-                label: 'Kat',
-                options: katOptions
-            }
-        ],
-        sortable: true
-    } );
+    const odalarTable = document.getElementById( 'odalar-table' );
+    if ( odalarTable ) {
+        window.tableSearchFilter_odalar = new TableSearchFilter( 'odalar-table', {
+            searchPlaceholder: 'Oda numarası veya kat ara...',
+            defaultItemsPerPage: 50,
+            filters: [
+                {
+                    columnIndex: 1,
+                    label: 'Kat',
+                    options: katOptions
+                }
+            ]
+        } );
+    }
     });
 </script>
 {% endblock %}

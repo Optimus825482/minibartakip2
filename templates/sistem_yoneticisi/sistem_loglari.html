@@ -313,22 +313,25 @@
 {% block extra_scripts %}
 <script>
     document.addEventListener( 'DOMContentLoaded', function () {
-        new TableSearchFilter( 'sistem-loglari-table', {
-            searchPlaceholder: 'Loglarda ara (kullanıcı, işlem, modül, detay, IP)...',
-            filters: [
-                {
-                    column: 2, // İşlem Tipi
-                    label: 'İşlem Tipi',
-                    type: 'badge'
-                },
-                {
-                    column: 3, // Modül
-                    label: 'Modül',
-                    type: 'badge'
-                }
-            ],
-            defaultItemsPerPage: 50
-        } );
+        const logTable = document.getElementById( 'sistem-loglari-table' );
+        if ( logTable ) {
+            new TableSearchFilter( 'sistem-loglari-table', {
+                searchPlaceholder: 'Loglarda ara (kullanıcı, işlem, modül, detay, IP)...',
+                filters: [
+                    {
+                        columnIndex: 2, // İşlem Tipi
+                        label: 'İşlem Tipi',
+                        type: 'badge'
+                    },
+                    {
+                        columnIndex: 3, // Modül
+                        label: 'Modül',
+                        type: 'badge'
+                    }
+                ],
+                defaultItemsPerPage: 50
+            } );
+        }
     } );
 </script>
 {% endblock %}

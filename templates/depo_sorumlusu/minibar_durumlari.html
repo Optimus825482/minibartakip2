@@ -462,16 +462,13 @@
     // Minibar ürünleri tablosu için gelişmiş arama ve filtreleme
     {% if minibar_bilgisi %}
     document.addEventListener( 'DOMContentLoaded', function () {
-        window.tableSearchFilter_minibar = new TableSearchFilter( {
-            tableId: 'minibar-urunler-table',
-            searchInputId: 'minibar-search',
-            searchPlaceholder: 'Ürün adı, grup veya birim ara...',
-            defaultItemsPerPage: 25,
-            itemsPerPageOptions: [10, 25, 50, 100],
-            noResultsMessage: 'Aradığınız kriterlere uygun ürün bulunamadı',
-            filters: [],
-            sortable: true
-        } );
+        const table = document.getElementById( 'minibar-urunler-table' );
+        if ( table ) {
+            window.tableSearchFilter_minibar = new TableSearchFilter( 'minibar-urunler-table', {
+                searchPlaceholder: 'Ürün adı, grup veya birim ara...',
+                filters: []
+            } );
+        }
     } );
     {% endif %}
 </script>

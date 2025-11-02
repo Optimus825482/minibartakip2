@@ -501,17 +501,20 @@
 
     // TableSearchFilter - Son Stok Hareketleri
     {% if son_hareketler %}
-    new TableSearchFilter( 'son-stok-hareketler-table', {
-        searchPlaceholder: 'Stok hareketlerinde ara (ürün, işlem yapan)...',
-        filters: [
-            {
-                column: 1, // Hareket Tipi
-                label: 'Hareket Tipi',
-                type: 'badge'
-            }
-        ],
-        defaultItemsPerPage: 10
-    } );
+    const stokHareketlerTable = document.getElementById( 'son-stok-hareketler-table' );
+    if ( stokHareketlerTable ) {
+        new TableSearchFilter( 'son-stok-hareketler-table', {
+            searchPlaceholder: 'Stok hareketlerinde ara (ürün, işlem yapan)...',
+            filters: [
+                {
+                    columnIndex: 1, // Hareket Tipi
+                    label: 'Hareket Tipi',
+                    type: 'badge'
+                }
+            ],
+            defaultItemsPerPage: 10
+        } );
+    }
     {% endif %}
 </script>
 {% endblock %}
