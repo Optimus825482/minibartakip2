@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, TextAreaField, IntegerField, SelectField
-from wtforms.validators import DataRequired, Email, Length, EqualTo, NumberRange, Optional, ValidationError
+from wtforms.validators import DataRequired, InputRequired, Email, Length, EqualTo, NumberRange, Optional, ValidationError
 import re
 
 
@@ -549,7 +549,7 @@ class KatForm(BaseForm):
     kat_no = IntegerField(
         'Kat Numarası',
         validators=[
-            DataRequired(message='Kat numarası zorunludur.'),
+            InputRequired(message='Kat numarası zorunludur.'),
             NumberRange(min=-5, max=100, message='Kat numarası -5 ile 100 arasında olmalıdır. (0: Zemin Kat)')
         ]
     )
