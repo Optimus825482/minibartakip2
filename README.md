@@ -11,6 +11,10 @@ Flask tabanlı, MySQL veritabanı kullanan profesyonel otel minibar yönetim sis
 - 📈 Detaylı raporlama ve analiz
 - 🎯 Minibar tüketim takibi
 - 🔔 Kritik stok uyarıları
+- 🏪 **Admin Minibar Yönetimi** (YENİ!)
+  - Depo stokları görüntüleme ve Excel export
+  - Oda bazında minibar stok takibi
+  - Tüm minibarları güvenli sıfırlama (admin şifresi ile)
 
 ## 📋 Gereksinimler
 
@@ -159,6 +163,10 @@ prof/
 - Ürün ve grup yönetimi
 - Personel tanımlama
 - Tüm raporlara erişim
+- **Minibar Yönetimi** (YENİ!)
+  - Depo stokları görüntüleme ve filtreleme
+  - Oda minibar stokları takibi
+  - Minibar sıfırlama (şifre doğrulama ile)
 
 ### 3. Depo Sorumlusu
 - Stok girişi ve çıkışı

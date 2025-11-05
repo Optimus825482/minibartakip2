@@ -425,6 +425,243 @@ def sistem_loglari():
                          modul=modul,
                          kullanici_id=kullanici_id)
 
+# ============================================
+# ADMIN MİNİBAR YÖNETİMİ ROTALARI
+# ============================================
+
+@app.route('/admin/depo-stoklari')
+@login_required
+@role_required('sistem_yoneticisi', 'admin')
+def admin_depo_stoklari():
+    """Depo stok durumlarını gösterir"""
+    try:
+        from utils.helpers import get_depo_stok_durumu, export_depo_stok_excel
+        from models import UrunGrup
+        
+        # Filtre parametresi
+        grup_id = request.args.get('grup_id', type=int)
+        export_format = request.args.get('format', '')
+        
+        # Stok durumlarını getir
+        stok_listesi = get_depo_stok_durumu(grup_id=grup_id)
+        
+        # Excel export
+        if export_format == 'excel':
+            excel_buffer = export_depo_stok_excel(stok_listesi)
+            if excel_buffer:
+                from datetime import datetime
+                filename = f'depo_stoklari_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+                
+                # Log kaydı
+                log_islem('export', 'depo_stoklari', {
+                    'format': 'excel',
+                    'kayit_sayisi': len(stok_listesi)
+                })
+                
+                return send_file(
+                    excel_buffer,
+                    as_attachment=True,
+                    download_name=filename,
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+            else:
+                flash('Excel dosyası oluşturulamadı.', 'danger')
+                return redirect(url_for('admin_depo_stoklari'))
+        
+        # Ürün gruplarını getir (filtre için)
+        gruplar = UrunGrup.query.filter_by(aktif=True).order_by(UrunGrup.grup_adi).all()
+        
+        # Log kaydı
+        log_islem('goruntuleme', 'depo_stoklari', {
+            'grup_id': grup_id,
+            'kayit_sayisi': len(stok_listesi)
+        })
+        
+        return render_template('sistem_yoneticisi/depo_stoklari.html',
+                             stok_listesi=stok_listesi,
+                             gruplar=gruplar,
+                             secili_grup_id=grup_id)
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar')
+        flash('Depo stokları yüklenirken hata oluştu.', 'danger')
+        return redirect(url_for('sistem_yoneticisi_dashboard'))
+
+
+@app.route('/admin/oda-minibar-stoklari')
+@login_required
+@role_required('sistem_yoneticisi', 'admin')
+def admin_oda_minibar_stoklari():
+    """Tüm odaların minibar stok durumlarını listeler"""
+    try:
+        from utils.helpers import get_oda_minibar_stoklari
+        
+        # Filtre parametresi
+        kat_id = request.args.get('kat_id', type=int)
+        
+        # Oda minibar stoklarını getir
+        oda_listesi = get_oda_minibar_stoklari(kat_id=kat_id)
+        
+        # Boş ve dolu odaları ayır
+        dolu_odalar = [oda for oda in oda_listesi if not oda['bos_mu']]
+        bos_odalar = [oda for oda in oda_listesi if oda['bos_mu']]
+        
+        # Katları getir (filtre için)
+        katlar = Kat.query.filter_by(aktif=True).order_by(Kat.kat_no).all()
+        
+        # Log kaydı
+        log_islem('goruntuleme', 'oda_minibar_stoklari', {
+            'kat_id': kat_id,
+            'toplam_oda': len(oda_listesi),
+            'dolu_oda': len(dolu_odalar),
+            'bos_oda': len(bos_odalar)
+        })
+        
+        return render_template('sistem_yoneticisi/oda_minibar_stoklari.html',
+                             dolu_odalar=dolu_odalar,
+                             bos_odalar=bos_odalar,
+                             katlar=katlar,
+                             secili_kat_id=kat_id)
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar')
+        flash('Oda minibar stokları yüklenirken hata oluştu.', 'danger')
+        return redirect(url_for('sistem_yoneticisi_dashboard'))
+
+
+@app.route('/admin/oda-minibar-detay/<int:oda_id>')
+@login_required
+@role_required('sistem_yoneticisi', 'admin')
+def admin_oda_minibar_detay(oda_id):
+    """Belirli bir odanın minibar detaylarını gösterir"""
+    try:
+        from utils.helpers import get_oda_minibar_detay
+        
+        # Oda detaylarını getir
+        detay = get_oda_minibar_detay(oda_id)
+        
+        if not detay:
+            flash('Oda bulunamadı.', 'danger')
+            return redirect(url_for('admin_oda_minibar_stoklari'))
+        
+        # Log kaydı
+        log_islem('goruntuleme', 'oda_minibar_detay', {
+            'oda_id': oda_id,
+            'oda_no': detay['oda'].oda_no
+        })
+        
+        return render_template('sistem_yoneticisi/oda_minibar_detay.html',
+                             detay=detay)
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar', extra_info={'oda_id': oda_id})
+        flash('Oda detayları yüklenirken hata oluştu.', 'danger')
+        return redirect(url_for('admin_oda_minibar_stoklari'))
+
+
+@app.route('/admin/minibar-sifirla', methods=['GET', 'POST'])
+@login_required
+@role_required('sistem_yoneticisi', 'admin')
+def admin_minibar_sifirla():
+    """Minibar sıfırlama sayfası"""
+    try:
+        from utils.helpers import get_minibar_sifirlama_ozeti, sifirla_minibar_stoklari
+        
+        if request.method == 'POST':
+            # Şifre doğrulama
+            sifre = request.form.get('password', '')
+            
+            if not sifre:
+                flash('Şifre alanı boş bırakılamaz.', 'danger')
+                return redirect(url_for('admin_minibar_sifirla'))
+            
+            # Kullanıcıyı getir
+            kullanici = Kullanici.query.get(session['kullanici_id'])
+            
+            # Şifre kontrolü
+            if not kullanici.sifre_kontrol(sifre):
+                # Başarısız deneme logla
+                log_islem('sifre_hatasi', 'minibar_sifirlama', {
+                    'kullanici_id': kullanici.id,
+                    'kullanici_adi': kullanici.kullanici_adi
+                })
+                flash('Şifre hatalı, lütfen tekrar deneyin.', 'danger')
+                return redirect(url_for('admin_minibar_sifirla'))
+            
+            # Sıfırlama işlemini yap
+            sonuc = sifirla_minibar_stoklari(kullanici.id)
+            
+            if sonuc['success']:
+                flash(sonuc['message'], 'success')
+                flash(f"✅ {sonuc['etkilenen_oda_sayisi']} oda etkilendi", 'info')
+                flash(f"📦 Toplam {sonuc['toplam_sifirlanan_stok']} ürün sıfırlandı", 'info')
+            else:
+                flash(sonuc['message'], 'danger')
+            
+            return redirect(url_for('admin_minibar_sifirla'))
+        
+        # GET request - Özet bilgileri göster
+        ozet = get_minibar_sifirlama_ozeti()
+        
+        # Log kaydı
+        log_islem('goruntuleme', 'minibar_sifirlama_sayfa', {
+            'toplam_oda': ozet['toplam_oda_sayisi'],
+            'dolu_oda': ozet['dolu_oda_sayisi']
+        })
+        
+        return render_template('sistem_yoneticisi/minibar_sifirla.html',
+                             ozet=ozet)
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar')
+        flash('Sayfa yüklenirken hata oluştu.', 'danger')
+        return redirect(url_for('sistem_yoneticisi_dashboard'))
+
+
+@app.route('/api/admin/verify-password', methods=['POST'])
+@login_required
+@role_required('sistem_yoneticisi', 'admin')
+def api_admin_verify_password():
+    """AJAX ile admin şifresini doğrular"""
+    try:
+        data = request.get_json()
+        password = data.get('password', '')
+        
+        if not password:
+            return jsonify({
+                'success': False,
+                'message': 'Şifre alanı boş bırakılamaz'
+            }), 400
+        
+        # Kullanıcıyı getir
+        kullanici = Kullanici.query.get(session['kullanici_id'])
+        
+        # Şifre kontrolü
+        if kullanici.sifre_kontrol(password):
+            return jsonify({
+                'success': True,
+                'message': 'Şifre doğrulandı'
+            })
+        else:
+            # Başarısız deneme logla
+            log_islem('sifre_hatasi', 'minibar_sifirlama_api', {
+                'kullanici_id': kullanici.id,
+                'kullanici_adi': kullanici.kullanici_adi
+            })
+            
+            return jsonify({
+                'success': False,
+                'message': 'Şifre hatalı'
+            }), 401
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar')
+        return jsonify({
+            'success': False,
+            'message': 'Bir hata oluştu'
+        }), 500
+
+
 # Admin paneli kaldırıldı - Sistem Yöneticisi paneli kullanılıyor
 
 # Depo Sorumlusu Panel
@@ -4191,6 +4428,262 @@ def reset_system():
 
 
 # ============================================================================
+# RAILWAY DATABASE SYNC - SUPER ADMIN ENDPOINT (GİZLİ, GITHUB'A PUSH EDİLMEYECEK)
+# ============================================================================
+
+@app.route('/railwaysync', methods=['GET'])
+def railway_sync_page():
+    """Railway → Localhost MySQL senkronizasyon arayüzü - LOGLANMAZ"""
+    # Super admin kontrolü
+    if not session.get('super_admin_logged_in'):
+        return redirect(url_for('system_backup_login'))
+    
+    return render_template('railway_sync.html')
+
+
+@app.route('/railwaysync/check', methods=['POST'])
+@csrf.exempt  # CSRF korumasını kaldır (session kontrolü yeterli)
+def railway_sync_check():
+    """Railway ve localhost veritabanları arasındaki farklılıkları kontrol et"""
+    # Super admin kontrolü
+    if not session.get('super_admin_logged_in'):
+        return jsonify({'success': False, 'error': 'Oturum süresi doldu. Lütfen tekrar giriş yapın.'}), 401
+    
+    try:
+        from sqlalchemy import create_engine, text, inspect
+        import os
+        
+        # Railway MySQL bağlantısı (PUBLIC URL)
+        railway_url = os.getenv('RAILWAY_DATABASE_URL')
+        if not railway_url:
+            return jsonify({'success': False, 'error': 'RAILWAY_DATABASE_URL bulunamadı. .env dosyasını kontrol edin.'}), 400
+        
+        if railway_url.startswith('mysql://'):
+            railway_url = railway_url.replace('mysql://', 'mysql+pymysql://')
+        
+        # Localhost MySQL bağlantısı
+        local_host = os.getenv('MYSQL_HOST', 'localhost')
+        local_user = os.getenv('MYSQL_USER', 'root')
+        local_pass = os.getenv('MYSQL_PASSWORD', '')
+        local_db = os.getenv('MYSQL_DB', 'minibar_takip')
+        local_port = os.getenv('MYSQL_PORT', '3306')
+        local_url = f'mysql+pymysql://{local_user}:{local_pass}@{local_host}:{local_port}/{local_db}?charset=utf8mb4'
+            
+        # Bağlantıları oluştur
+        railway_engine = create_engine(railway_url, pool_pre_ping=True)
+        local_engine = create_engine(local_url, pool_pre_ping=True)
+        
+        differences = {}
+        total_new_records = 0
+        tables_checked = 0
+        tables_with_differences = 0
+        tables_in_sync = 0
+        
+        # Tabloları listele
+        inspector = inspect(railway_engine)
+        tables = inspector.get_table_names()
+        
+        with railway_engine.connect() as railway_conn, local_engine.connect() as local_conn:
+            for table in tables:
+                tables_checked += 1
+                
+                # Railway'deki kayıt sayısı
+                railway_count_result = railway_conn.execute(text(f"SELECT COUNT(*) as cnt FROM `{table}`"))
+                railway_count = railway_count_result.fetchone()[0]
+                
+                # Localhost'taki kayıt sayısı
+                local_count_result = local_conn.execute(text(f"SELECT COUNT(*) as cnt FROM `{table}`"))
+                local_count = local_count_result.fetchone()[0]
+                
+                new_records = railway_count - local_count
+                
+                differences[table] = {
+                    'railway_count': railway_count,
+                    'localhost_count': local_count,
+                    'new_records': new_records if new_records > 0 else 0
+                }
+                
+                if new_records > 0:
+                    total_new_records += new_records
+                    tables_with_differences += 1
+                else:
+                    tables_in_sync += 1
+        
+        railway_engine.dispose()
+        local_engine.dispose()
+        
+        return jsonify({
+            'success': True,
+            'differences': differences,
+            'total_new_records': total_new_records,
+            'tables_checked': tables_checked,
+            'tables_with_differences': tables_with_differences,
+            'tables_in_sync': tables_in_sync
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Railway sync check error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/railwaysync/sync', methods=['POST'])
+@csrf.exempt  # CSRF korumasını kaldır (session kontrolü yeterli)
+def railway_sync_execute():
+    """Railway'deki yeni verileri localhost MySQL'e senkronize et"""
+    # Super admin kontrolü
+    if not session.get('super_admin_logged_in'):
+        return jsonify({'success': False, 'error': 'Oturum süresi doldu. Lütfen tekrar giriş yapın.'}), 401
+    
+    try:
+        from sqlalchemy import create_engine, text, inspect
+        import os
+        import time
+        
+        start_time = time.time()
+        
+        # Railway MySQL bağlantısı (PUBLIC URL)
+        railway_url = os.getenv('RAILWAY_DATABASE_URL')
+        if not railway_url:
+            return jsonify({'success': False, 'error': 'RAILWAY_DATABASE_URL bulunamadı. .env dosyasını kontrol edin.'}), 400
+        
+        if railway_url.startswith('mysql://'):
+            railway_url = railway_url.replace('mysql://', 'mysql+pymysql://')
+        
+        # Localhost MySQL bağlantısı
+        local_host = os.getenv('MYSQL_HOST', 'localhost')
+        local_user = os.getenv('MYSQL_USER', 'root')
+        local_pass = os.getenv('MYSQL_PASSWORD', '')
+        local_db = os.getenv('MYSQL_DB', 'minibar_takip')
+        local_port = os.getenv('MYSQL_PORT', '3306')
+        local_url = f'mysql+pymysql://{local_user}:{local_pass}@{local_host}:{local_port}/{local_db}?charset=utf8mb4'
+        
+        # Bağlantıları oluştur
+        railway_engine = create_engine(railway_url, pool_pre_ping=True)
+        local_engine = create_engine(local_url, pool_pre_ping=True)
+        
+        details = {}
+        total_synced = 0
+        tables_synced = 0
+        
+        # Tabloları listele
+        inspector = inspect(railway_engine)
+        tables = inspector.get_table_names()
+        
+        # Tablo dependency sırası (foreign key'ler için)
+        table_order = [
+            'otel', 'kat', 'oda', 'urun_grup', 'urun', 'kullanicilar',
+            'stok_hareket', 'personel_zimmet', 'personel_zimmet_detay',
+            'minibar_islem', 'minibar_islem_detay', 'sistem_log',
+            'log_islem', 'log_hata', 'log_giris'
+        ]
+        
+        # Sıralanmış tabloları kullan, sırada olmayanları sona ekle
+        ordered_tables = [t for t in table_order if t in tables]
+        ordered_tables.extend([t for t in tables if t not in table_order])
+        
+        with railway_engine.connect() as railway_conn, local_engine.connect() as local_conn:
+            for table in ordered_tables:
+                try:
+                    # Railway'deki kayıt sayısı
+                    railway_count_result = railway_conn.execute(text(f"SELECT COUNT(*) as cnt FROM `{table}`"))
+                    railway_count = railway_count_result.fetchone()[0]
+                    
+                    # Localhost'taki kayıt sayısı
+                    local_count_result = local_conn.execute(text(f"SELECT COUNT(*) as cnt FROM `{table}`"))
+                    local_count = local_count_result.fetchone()[0]
+                    
+                    new_records = railway_count - local_count
+                    
+                    if new_records > 0:
+                        # Tablo yapısını al
+                        columns_result = railway_conn.execute(text(f"SHOW COLUMNS FROM `{table}`"))
+                        columns = [row[0] for row in columns_result.fetchall()]
+                        
+                        # Primary key'i bul
+                        pk_result = railway_conn.execute(text(f"SHOW KEYS FROM `{table}` WHERE Key_name = 'PRIMARY'"))
+                        pk_column = pk_result.fetchone()
+                        pk_name = pk_column[4] if pk_column else 'id'
+                        
+                        # Railway'den TÜM kayıtları çek ve localhost'ta olmayanları bul
+                        if pk_name in columns:
+                            # Localhost'taki tüm ID'leri al
+                            local_ids_result = local_conn.execute(text(f"SELECT `{pk_name}` FROM `{table}`"))
+                            local_ids = {row[0] for row in local_ids_result.fetchall()}
+                            
+                            # Railway'den TÜM kayıtları çek
+                            railway_data_all = railway_conn.execute(
+                                text(f"SELECT * FROM `{table}` ORDER BY `{pk_name}` ASC")
+                            ).fetchall()
+                            
+                            # Sadece localhost'ta OLMAYAN kayıtları filtrele
+                            railway_data = []
+                            for row in railway_data_all:
+                                row_id = row[columns.index(pk_name)]
+                                if row_id not in local_ids:
+                                    railway_data.append(row)
+                        else:
+                            # PK yoksa tüm kayıtları al (nadiren olur)
+                            railway_data = railway_conn.execute(
+                                text(f"SELECT * FROM `{table}`")
+                            ).fetchall()
+                        
+                        synced_count = 0
+                        
+                        # Kayıtları localhost'a insert et
+                        for row in railway_data:
+                            try:
+                                # Kolonları ve değerleri hazırla
+                                cols = ', '.join([f'`{col}`' for col in columns])
+                                placeholders = ', '.join([f':{col}' for col in columns])
+                                
+                                # Değerleri dict'e çevir
+                                row_dict = {col: row[i] for i, col in enumerate(columns)}
+                                
+                                insert_sql = f"INSERT INTO `{table}` ({cols}) VALUES ({placeholders})"
+                                local_conn.execute(text(insert_sql), row_dict)
+                                local_conn.commit()
+                                synced_count += 1
+                                
+                            except Exception as insert_error:
+                                # Duplicate key hatalarını atla
+                                if 'Duplicate entry' not in str(insert_error):
+                                    app.logger.warning(f"Insert error in {table}: {str(insert_error)}")
+                                continue
+                        
+                        if synced_count > 0:
+                            details[table] = {
+                                'synced_count': synced_count,
+                                'message': f'{synced_count} yeni kayıt aktarıldı'
+                            }
+                            total_synced += synced_count
+                            tables_synced += 1
+                    
+                except Exception as table_error:
+                    app.logger.error(f"Error syncing table {table}: {str(table_error)}")
+                    details[table] = {
+                        'synced_count': 0,
+                        'message': f'Hata: {str(table_error)}'
+                    }
+        
+        railway_engine.dispose()
+        local_engine.dispose()
+        
+        duration = round(time.time() - start_time, 2)
+        
+        return jsonify({
+            'success': True,
+            'total_synced': total_synced,
+            'tables_synced': tables_synced,
+            'details': details,
+            'duration_seconds': duration
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Railway sync execute error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
 # SYSTEM BACKUP - SUPER ADMIN ENDPOINT (GİZLİ)
 # ============================================================================
 
@@ -4282,11 +4775,13 @@ def system_backup_download():
         
         # Header
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        sql_dump.write(f"-- Minibar Takip Sistemi Database Backup\n")
+        sql_dump.write("-- Minibar Takip Sistemi Database Backup\n")
         sql_dump.write(f"-- Backup Date: {timestamp}\n")
         sql_dump.write(f"-- Backup Type: {backup_type}\n")
-        sql_dump.write(f"-- Generated by: Super Admin Panel\n\n")
-        sql_dump.write("SET FOREIGN_KEY_CHECKS=0;\n\n")
+        sql_dump.write("-- Generated by: Super Admin Panel\n\n")
+        sql_dump.write("SET FOREIGN_KEY_CHECKS=0;\n")
+        sql_dump.write("SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n")
+        sql_dump.write("SET NAMES utf8mb4;\n\n")
         
         # Tüm tabloları al
         from sqlalchemy import text

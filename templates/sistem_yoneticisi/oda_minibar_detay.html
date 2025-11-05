@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Oda Minibar Detay - Minibar Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="space-y-4 md:space-y-6">
+    <!-- Geri Butonu ve Başlık -->
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('admin_oda_minibar_stoklari') }}" 
+           class="inline-flex items-center px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Geri
+        </a>
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100">
+                🚪 Oda {{ detay.oda.oda_no }} - Minibar Detay
+            </h1>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                {{ detay.oda.kat.kat_adi }} - {{ detay.oda.kat.kat_no }}. Kat
+            </p>
+        </div>
+    </div>
+
+    <!-- Oda Bilgileri Kartı -->
+    <div class="bg-white dark:bg-slate-800 shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100 mb-4">Oda Bilgileri</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Oda Numarası</p>
+                <p class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ detay.oda.oda_no }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Kat</p>
+                <p class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ detay.oda.kat.kat_adi }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Son İşlem Tarihi</p>
+                <p class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                    {% if detay.son_islem %}
+                    {{ detay.son_islem.islem_tarihi.strftime('%d.%m.%Y %H:%M') }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minibar Ürün Detayları -->
+    <div class="bg-white dark:bg-slate-800 shadow rounded-lg overflow-hidden">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100 mb-4">Minibar Ürünleri</h3>
+            
+            {% if detay.urunler %}
+            <div class="table-wrapper">
+                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                    <thead class="bg-slate-50 dark:bg-slate-900">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                Ürün Adı
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                Başlangıç Stok
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                Bitiş Stok
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                Tüketim
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                Eklenen
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                        {% for urun in detay.urunler %}
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-100">
+                                {{ urun.urun_adi }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
+                                {{ urun.baslangic_stok }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                {{ urun.bitis_stok }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {% if urun.tuketim > 0 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                                    -{{ urun.tuketim }}
+                                </span>
+                                {% else %}
+                                <span class="text-slate-500 dark:text-slate-400">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {% if urun.eklenen_miktar > 0 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                    +{{ urun.eklenen_miktar }}
+                                </span>
+                                {% else %}
+                                <span class="text-slate-500 dark:text-slate-400">0</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-slate-50 dark:bg-slate-900">
+                        <tr>
+                            <td class="px-6 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">
+                                TOPLAM
+                            </td>
+                            <td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                {{ detay.urunler|sum(attribute='baslangic_stok') }}
+                            </td>
+                            <td class="px-6 py-4 text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                {{ detay.urunler|sum(attribute='bitis_stok') }}
+                            </td>
+                            <td class="px-6 py-4 text-sm font-semibold text-red-600 dark:text-red-400">
+                                -{{ detay.urunler|sum(attribute='tuketim') }}
+                            </td>
+                            <td class="px-6 py-4 text-sm font-semibold text-green-600 dark:text-green-400">
+                                +{{ detay.urunler|sum(attribute='eklenen_miktar') }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Özet Bilgiler -->
+            <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                    <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">Toplam Ürün Çeşidi</p>
+                    <p class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ detay.urunler|length }}</p>
+                </div>
+                <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                    <p class="text-sm text-red-600 dark:text-red-400 font-medium">Toplam Tüketim</p>
+                    <p class="text-2xl font-bold text-red-700 dark:text-red-300">{{ detay.urunler|sum(attribute='tuketim') }}</p>
+                </div>
+                <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                    <p class="text-sm text-green-600 dark:text-green-400 font-medium">Toplam Eklenen</p>
+                    <p class="text-2xl font-bold text-green-700 dark:text-green-300">{{ detay.urunler|sum(attribute='eklenen_miktar') }}</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-slate-400 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                </svg>
+                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Bu odada henüz minibar işlemi yapılmamış</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Tablo scroll indicator
+document.addEventListener('DOMContentLoaded', function() {
+    const tableWrapper = document.querySelector('.table-wrapper');
+    if (tableWrapper) {
+        tableWrapper.addEventListener('scroll', function() {
+            if (this.scrollLeft + this.clientWidth >= this.scrollWidth - 10) {
+                this.classList.add('scrolled-end');
+            } else {
+                this.classList.remove('scrolled-end');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

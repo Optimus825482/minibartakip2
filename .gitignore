@@ -64,3 +64,6 @@ SISTEM_OZETI.md
 # Migration scripts (already executed)
 migrate_*.py
 migration_*.py
+
+# Railway Sync (localhost only - contains production credentials)
+templates/railway_sync.html

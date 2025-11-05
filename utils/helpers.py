@@ -571,3 +571,439 @@ def hata_cozuldu_isaretle(hata_id, cozum_notu=None):
         db.session.rollback()
     return False
 
+
+
+# ============================================
+# ADMIN MINIBAR YÖNETİMİ HELPER FONKSIYONLARI
+# ============================================
+
+def get_depo_stok_durumu(grup_id=None):
+    """
+    Depo stok durumlarını hesaplar
+    
+    Args:
+        grup_id (int, optional): Ürün grubu filtresi
+    
+    Returns:
+        list: [
+            {
+                'urun_id': int,
+                'urun_adi': str,
+                'grup_adi': str,
+                'birim': str,
+                'mevcut_stok': int,
+                'kritik_stok': int,
+                'durum': 'kritik'|'dikkat'|'normal',
+                'badge_class': str,
+                'badge_text': str
+            },
+            ...
+        ]
+    """
+    try:
+        from models import UrunGrup
+        
+        # Ürünleri getir
+        query = Urun.query.filter_by(aktif=True)
+        if grup_id:
+            query = query.filter_by(grup_id=grup_id)
+        
+        urunler = query.all()
+        
+        # Stok durumlarını hesapla
+        stok_map = get_stok_toplamlari([urun.id for urun in urunler])
+        
+        sonuclar = []
+        for urun in urunler:
+            mevcut_stok = stok_map.get(urun.id, 0)
+            kritik_seviye = urun.kritik_stok_seviyesi
+            dikkat_esigi = kritik_seviye * 1.5
+            
+            # Durum belirleme
+            if mevcut_stok <= kritik_seviye:
+                durum = 'kritik'
+                badge_class = 'bg-red-100 text-red-800 border border-red-300 dark:bg-red-900/20 dark:text-red-400'
+                badge_text = 'Kritik'
+            elif mevcut_stok <= dikkat_esigi:
+                durum = 'dikkat'
+                badge_class = 'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400'
+                badge_text = 'Dikkat'
+            else:
+                durum = 'normal'
+                badge_class = 'bg-green-100 text-green-800 border border-green-300 dark:bg-green-900/20 dark:text-green-400'
+                badge_text = 'Normal'
+            
+            sonuclar.append({
+                'urun_id': urun.id,
+                'urun_adi': urun.urun_adi,
+                'grup_adi': urun.grup.grup_adi,
+                'birim': urun.birim,
+                'mevcut_stok': mevcut_stok,
+                'kritik_stok': kritik_seviye,
+                'durum': durum,
+                'badge_class': badge_class,
+                'badge_text': badge_text
+            })
+        
+        # Kritik olanları başa al
+        sonuclar.sort(key=lambda x: (0 if x['durum'] == 'kritik' else 1 if x['durum'] == 'dikkat' else 2, x['urun_adi']))
+        
+        return sonuclar
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar', extra_info={'function': 'get_depo_stok_durumu'})
+        return []
+
+
+def get_oda_minibar_stoklari(kat_id=None):
+    """
+    Tüm odaların minibar stok durumlarını getirir
+    
+    Args:
+        kat_id (int, optional): Kat filtresi
+    
+    Returns:
+        list: [
+            {
+                'oda_id': int,
+                'oda_no': str,
+                'kat_adi': str,
+                'kat_no': int,
+                'son_islem_tarihi': datetime,
+                'toplam_urun_sayisi': int,
+                'bos_mu': bool
+            },
+            ...
+        ]
+    """
+    try:
+        from models import Oda, Kat, MinibarIslem
+        
+        # Odaları getir
+        query = Oda.query.filter_by(aktif=True).join(Kat)
+        if kat_id:
+            query = query.filter(Oda.kat_id == kat_id)
+        
+        odalar = query.order_by(Kat.kat_no, Oda.oda_no).all()
+        
+        sonuclar = []
+        for oda in odalar:
+            # Son minibar işlemini bul
+            son_islem = MinibarIslem.query.filter_by(oda_id=oda.id).order_by(
+                MinibarIslem.islem_tarihi.desc()
+            ).first()
+            
+            if son_islem:
+                # Ürün sayısını hesapla
+                toplam_urun = len(son_islem.detaylar)
+                bos_mu = False
+                son_islem_tarihi = son_islem.islem_tarihi
+            else:
+                toplam_urun = 0
+                bos_mu = True
+                son_islem_tarihi = None
+            
+            sonuclar.append({
+                'oda_id': oda.id,
+                'oda_no': oda.oda_no,
+                'kat_adi': oda.kat.kat_adi,
+                'kat_no': oda.kat.kat_no,
+                'son_islem_tarihi': son_islem_tarihi,
+                'toplam_urun_sayisi': toplam_urun,
+                'bos_mu': bos_mu
+            })
+        
+        return sonuclar
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar', extra_info={'function': 'get_oda_minibar_stoklari'})
+        return []
+
+
+def get_oda_minibar_detay(oda_id):
+    """
+    Belirli bir odanın minibar detaylarını getirir
+    
+    Args:
+        oda_id (int): Oda ID
+    
+    Returns:
+        dict: {
+            'oda': Oda object,
+            'son_islem': MinibarIslem object,
+            'urunler': [
+                {
+                    'urun_adi': str,
+                    'baslangic_stok': int,
+                    'bitis_stok': int,
+                    'tuketim': int,
+                    'eklenen_miktar': int
+                },
+                ...
+            ]
+        } veya None
+    """
+    try:
+        from models import Oda, MinibarIslem
+        
+        # Odayı getir
+        oda = Oda.query.get(oda_id)
+        if not oda:
+            return None
+        
+        # Son minibar işlemini bul
+        son_islem = MinibarIslem.query.filter_by(oda_id=oda_id).order_by(
+            MinibarIslem.islem_tarihi.desc()
+        ).first()
+        
+        if not son_islem:
+            return {
+                'oda': oda,
+                'son_islem': None,
+                'urunler': []
+            }
+        
+        # Ürün detaylarını hazırla
+        urunler = []
+        for detay in son_islem.detaylar:
+            urunler.append({
+                'urun_adi': detay.urun.urun_adi,
+                'baslangic_stok': detay.baslangic_stok,
+                'bitis_stok': detay.bitis_stok,
+                'tuketim': detay.tuketim,
+                'eklenen_miktar': detay.eklenen_miktar
+            })
+        
+        return {
+            'oda': oda,
+            'son_islem': son_islem,
+            'urunler': urunler
+        }
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar', extra_info={'function': 'get_oda_minibar_detay', 'oda_id': oda_id})
+        return None
+
+
+def get_minibar_sifirlama_ozeti():
+    """
+    Sıfırlama öncesi özet bilgileri getirir
+    
+    Returns:
+        dict: {
+            'toplam_oda_sayisi': int,
+            'dolu_oda_sayisi': int,
+            'toplam_urun_adedi': int,
+            'urun_dagilimi': [
+                {'urun_adi': str, 'toplam': int},
+                ...
+            ]
+        }
+    """
+    try:
+        from models import Oda, MinibarIslem, MinibarIslemDetay
+        
+        # Toplam oda sayısı
+        toplam_oda = Oda.query.filter_by(aktif=True).count()
+        
+        # Dolu oda sayısı (en az bir minibar işlemi olan)
+        dolu_oda = db.session.query(MinibarIslem.oda_id).distinct().count()
+        
+        # Toplam ürün adedi (tüm odalardaki bitiş stokları toplamı)
+        toplam_urun = db.session.query(
+            db.func.sum(MinibarIslemDetay.bitis_stok)
+        ).join(MinibarIslem).scalar() or 0
+        
+        # Ürün dağılımı
+        urun_dagilimi = db.session.query(
+            Urun.urun_adi,
+            db.func.sum(MinibarIslemDetay.bitis_stok).label('toplam')
+        ).join(
+            MinibarIslemDetay, MinibarIslemDetay.urun_id == Urun.id
+        ).group_by(
+            Urun.id, Urun.urun_adi
+        ).order_by(
+            db.desc('toplam')
+        ).limit(10).all()
+        
+        return {
+            'toplam_oda_sayisi': toplam_oda,
+            'dolu_oda_sayisi': dolu_oda,
+            'toplam_urun_adedi': int(toplam_urun),
+            'urun_dagilimi': [
+                {'urun_adi': u[0], 'toplam': int(u[1] or 0)}
+                for u in urun_dagilimi
+            ]
+        }
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar', extra_info={'function': 'get_minibar_sifirlama_ozeti'})
+        return {
+            'toplam_oda_sayisi': 0,
+            'dolu_oda_sayisi': 0,
+            'toplam_urun_adedi': 0,
+            'urun_dagilimi': []
+        }
+
+
+def sifirla_minibar_stoklari(kullanici_id):
+    """
+    Tüm minibar işlemlerini ve detaylarını tamamen siler (TRUNCATE)
+    
+    Args:
+        kullanici_id (int): İşlemi yapan kullanıcı ID
+    
+    Returns:
+        dict: {
+            'success': bool,
+            'etkilenen_oda_sayisi': int,
+            'toplam_sifirlanan_stok': int,
+            'message': str
+        }
+    """
+    try:
+        from models import MinibarIslemDetay, MinibarIslem
+        from utils.audit import audit_delete
+        
+        # İşlem öncesi özet bilgileri al
+        ozet = get_minibar_sifirlama_ozeti()
+        toplam_sifirlanan = ozet['toplam_urun_adedi']
+        etkilenen_oda_sayisi = ozet['dolu_oda_sayisi']
+        
+        # Önce tüm detayları sil (foreign key constraint için)
+        silinen_detay = MinibarIslemDetay.query.delete()
+        
+        # Sonra tüm işlemleri sil
+        silinen_islem = MinibarIslem.query.delete()
+        
+        # Transaction commit
+        db.session.commit()
+        
+        # Audit log
+        audit_delete(
+            tablo_adi='minibar_islem',
+            kayit_id=None,
+            aciklama=f'Tüm minibar işlemleri silindi (TRUNCATE). {etkilenen_oda_sayisi} oda etkilendi. {silinen_islem} işlem, {silinen_detay} detay kaydı silindi.',
+            eski_deger={
+                'silinen_islem': silinen_islem,
+                'silinen_detay': silinen_detay,
+                'etkilenen_oda_sayisi': etkilenen_oda_sayisi,
+                'toplam_sifirlanan': toplam_sifirlanan
+            }
+        )
+        
+        # Sistem log
+        log_islem(
+            islem_tipi='silme',
+            modul='minibar_sifirlama',
+            islem_detay={
+                'kullanici_id': kullanici_id,
+                'etkilenen_oda_sayisi': etkilenen_oda_sayisi,
+                'silinen_islem': silinen_islem,
+                'silinen_detay': silinen_detay,
+                'toplam_sifirlanan_stok': toplam_sifirlanan,
+                'tarih': datetime.now().isoformat()
+            }
+        )
+        
+        return {
+            'success': True,
+            'etkilenen_oda_sayisi': etkilenen_oda_sayisi,
+            'toplam_sifirlanan_stok': toplam_sifirlanan,
+            'message': f'Tüm minibar kayıtları başarıyla silindi. {silinen_islem} işlem, {silinen_detay} detay kaydı temizlendi.'
+        }
+        
+    except Exception as e:
+        db.session.rollback()
+        log_hata(e, modul='admin_minibar', extra_info={'function': 'sifirla_minibar_stoklari', 'kullanici_id': kullanici_id})
+        
+        return {
+            'success': False,
+            'etkilenen_oda_sayisi': 0,
+            'toplam_sifirlanan_stok': 0,
+            'message': f'Sıfırlama işlemi başarısız: {str(e)}'
+        }
+
+
+def export_depo_stok_excel(stok_listesi):
+    """
+    Depo stok listesini Excel formatında export eder
+    
+    Args:
+        stok_listesi (list): get_depo_stok_durumu() çıktısı
+    
+    Returns:
+        BytesIO: Excel dosyası buffer
+    """
+    try:
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Depo Stokları"
+        
+        # Başlık stili
+        baslik_font = Font(name='Calibri', size=12, bold=True, color='FFFFFF')
+        baslik_fill = PatternFill(start_color='1e40af', end_color='1e40af', fill_type='solid')
+        baslik_alignment = Alignment(horizontal='center', vertical='center')
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Başlıklar
+        headers = ['Ürün Adı', 'Grup', 'Birim', 'Mevcut Stok', 'Kritik Stok', 'Durum']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num, value=header)
+            cell.font = baslik_font
+            cell.fill = baslik_fill
+            cell.alignment = baslik_alignment
+            cell.border = border
+        
+        # Veri satırları
+        for row_num, item in enumerate(stok_listesi, 2):
+            data = [
+                item['urun_adi'],
+                item['grup_adi'],
+                item['birim'],
+                item['mevcut_stok'],
+                item['kritik_stok'],
+                item['badge_text']
+            ]
+            
+            for col_num, value in enumerate(data, 1):
+                cell = ws.cell(row=row_num, column=col_num, value=value)
+                cell.border = border
+                cell.alignment = Alignment(horizontal='left', vertical='center')
+                
+                # Kritik stok vurgulama
+                if item['durum'] == 'kritik':
+                    cell.fill = PatternFill(start_color='FEE2E2', end_color='FEE2E2', fill_type='solid')
+                    if col_num == 6:  # Durum kolonu
+                        cell.font = Font(color='DC2626', bold=True)
+                elif item['durum'] == 'dikkat':
+                    cell.fill = PatternFill(start_color='FEF3C7', end_color='FEF3C7', fill_type='solid')
+                    if col_num == 6:
+                        cell.font = Font(color='D97706', bold=True)
+        
+        # Sütun genişlikleri
+        ws.column_dimensions['A'].width = 35
+        ws.column_dimensions['B'].width = 20
+        ws.column_dimensions['C'].width = 12
+        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['E'].width = 15
+        ws.column_dimensions['F'].width = 12
+        
+        # Freeze panes (İlk satır sabit)
+        ws.freeze_panes = 'A2'
+        
+        # BytesIO'ya kaydet
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        return output
+        
+    except Exception as e:
+        log_hata(e, modul='admin_minibar', extra_info={'function': 'export_depo_stok_excel'})
+        return None
