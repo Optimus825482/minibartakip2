@@ -114,6 +114,76 @@ def create_tables():
         print(f"❌ Tablo oluşturma hatası: {e}")
         return False
 
+def run_migrations():
+    """Eksik kolonları ekle (Railway için migration)"""
+    
+    print()
+    print("🔄 Migration kontrol ediliyor...")
+    
+    try:
+        with app.app_context():
+            inspector = inspect(db.engine)
+            
+            # odalar tablosundaki kolonları kontrol et
+            odalar_columns = [col['name'] for col in inspector.get_columns('odalar')]
+            
+            migrations_needed = []
+            
+            # QR kod kolonları eksik mi?
+            qr_columns = ['qr_kod_token', 'qr_kod_gorsel', 'qr_kod_olusturma_tarihi', 'misafir_mesaji']
+            missing_qr_columns = [col for col in qr_columns if col not in odalar_columns]
+            
+            if missing_qr_columns:
+                migrations_needed.append(('odalar', missing_qr_columns))
+            
+            # personel_zimmet_detay tablosundaki kolonları kontrol et
+            zimmet_columns = [col['name'] for col in inspector.get_columns('personel_zimmet_detay')]
+            
+            if 'kritik_stok_seviyesi' not in zimmet_columns:
+                migrations_needed.append(('personel_zimmet_detay', ['kritik_stok_seviyesi']))
+            
+            if not migrations_needed:
+                print("✅ Tüm kolonlar mevcut, migration gerekmiyor")
+                return True
+            
+            # Migration çalıştır
+            print(f"⚠️  {len(migrations_needed)} tabloda eksik kolon bulundu")
+            
+            for table_name, missing_cols in migrations_needed:
+                print(f"📝 {table_name} tablosu güncelleniyor...")
+                
+                if table_name == 'odalar':
+                    # QR kod kolonlarını ekle
+                    if 'qr_kod_token' in missing_cols:
+                        db.engine.execute("ALTER TABLE odalar ADD COLUMN qr_kod_token VARCHAR(64) NULL")
+                        print("   ✓ qr_kod_token eklendi")
+                    
+                    if 'qr_kod_gorsel' in missing_cols:
+                        db.engine.execute("ALTER TABLE odalar ADD COLUMN qr_kod_gorsel TEXT NULL")
+                        print("   ✓ qr_kod_gorsel eklendi")
+                    
+                    if 'qr_kod_olusturma_tarihi' in missing_cols:
+                        db.engine.execute("ALTER TABLE odalar ADD COLUMN qr_kod_olusturma_tarihi DATETIME NULL")
+                        print("   ✓ qr_kod_olusturma_tarihi eklendi")
+                    
+                    if 'misafir_mesaji' in missing_cols:
+                        db.engine.execute("ALTER TABLE odalar ADD COLUMN misafir_mesaji VARCHAR(500) NULL")
+                        print("   ✓ misafir_mesaji eklendi")
+                
+                elif table_name == 'personel_zimmet_detay':
+                    # Kritik stok seviyesi kolonunu ekle
+                    if 'kritik_stok_seviyesi' in missing_cols:
+                        db.engine.execute("ALTER TABLE personel_zimmet_detay ADD COLUMN kritik_stok_seviyesi INTEGER NULL DEFAULT 0")
+                        print("   ✓ kritik_stok_seviyesi eklendi")
+            
+            print("✅ Migration başarıyla tamamlandı!")
+            return True
+            
+    except Exception as e:
+        print(f"❌ Migration hatası: {e}")
+        print(f"   Detay: {str(e)}")
+        return False
+
 def verify_setup():
     """Kurulumu doğrula"""
     
@@ -177,7 +247,12 @@ def main():
         print("❌ Tablolar oluşturulamadı. Kurulum iptal edildi.")
         return False
     
-    # 3. Kurulumu doğrula
+    # 3. Migration çalıştır (eksik kolonları ekle)
+    if not run_migrations():
+        print()
+        print("⚠️  Migration tamamlanamadı ancak devam ediliyor...")
+    
+    # 4. Kurulumu doğrula
     if not verify_setup():
         print()
         print("⚠️  Kurulum tamamlandı ancak bazı tablolar eksik olabilir.")
@@ -193,11 +268,6 @@ def main():
     print("   1. Uygulamayı başlatın: python app.py")
     print("   2. Tarayıcıda açın: http://localhost:5014")
     print("   3. İlk kurulum sayfasından sistem yöneticisi oluşturun")
-    print()
-    print("⚠️  ÖNEMLİ NOT:")
-    print("   Eğer mevcut bir veritabanını güncelliyorsanız,")
-    print("   QR kod sistemi için migration çalıştırın:")
-    print("   python migrations/add_qr_kod_system.py")
     print()
     print("🚀 İyi çalışmalar!")
     print()
