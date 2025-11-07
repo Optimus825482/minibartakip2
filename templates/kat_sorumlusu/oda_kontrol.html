@@ -710,11 +710,19 @@ function qrIleBaslat() {
 async function onQrCodeScanned(decodedText) {
     console.log('QR kod okundu:', decodedText);
     
-    if (qrScanner) {
-        qrScanner.stop();
+    // QR scanner'ı durdur
+    try {
+        if (qrScanner) {
+            await qrScanner.stop();
+            console.log('QR scanner durduruldu');
+        }
+    } catch (err) {
+        console.error('QR scanner durdurma hatası:', err);
     }
     
-    qrModalKapat();
+    // Modalı kapat
+    document.getElementById('qr_modal').classList.add('hidden');
+    console.log('QR modal kapatıldı');
     
     try {
         const response = await fetch('/api/kat-sorumlusu/qr-parse', {
@@ -733,21 +741,23 @@ async function onQrCodeScanned(decodedText) {
             // Önce kat seç
             const katSelect = document.getElementById('kat_id');
             katSelect.value = data.data.kat_id;
-            console.log('Kat seçildi:', data.data.kat_id);
+            console.log('Kat dropdown değeri set edildi:', data.data.kat_id);
             
             // Kat seçilince odaları yükle
             await katSecildi();
+            console.log('Odalar yüklendi');
             
             // Odaların yüklenmesi için kısa bir bekleme
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 300));
             
             // Sonra oda seç
             const odaSelect = document.getElementById('oda_id');
             odaSelect.value = data.data.oda_id;
-            console.log('Oda seçildi:', data.data.oda_id);
+            console.log('Oda dropdown değeri set edildi:', data.data.oda_id);
             
             // Oda seçilince ürünleri yükle
             await odaSecildi();
+            console.log('Ürünler yüklendi');
             
             basariGoster(`Oda ${data.data.oda_no} seçildi`);
         } else {
@@ -769,11 +779,17 @@ function onQrCodeError(error) {
 /**
  * QR modalını kapat
  */
-function qrModalKapat() {
-    if (qrScanner) {
-        qrScanner.stop().catch(err => console.error('QR durdurma hatası:', err));
+async function qrModalKapat() {
+    try {
+        if (qrScanner) {
+            await qrScanner.stop();
+            console.log('QR scanner durduruldu (manuel)');
+        }
+    } catch (err) {
+        console.error('QR durdurma hatası:', err);
     }
     document.getElementById('qr_modal').classList.add('hidden');
+    console.log('QR modal kapatıldı (manuel)');
 }
 
 /**
