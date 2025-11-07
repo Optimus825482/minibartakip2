@@ -420,12 +420,9 @@
     document.getElementById( 'kat_id' ).addEventListener( 'change', async function () {
         const katId = this.value;
         const odaSelect = document.getElementById( 'oda_id' );
-        const islemTipiSelect = document.getElementById( 'islem_tipi' );
 
         odaSelect.innerHTML = '<option value="">Oda seçiniz...</option>';
         odaSelect.disabled = true;
-        islemTipiSelect.disabled = true;
-        islemTipiSelect.value = '';
         resetForm();
 
         if ( !katId ) return;
