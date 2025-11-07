@@ -404,6 +404,94 @@
     </div>
 </div>
 
+<!-- Ek Dolum Modal -->
+<div id="ek_dolum_modal" class="fixed inset-0 bg-slate-900 dark:bg-slate-950 bg-opacity-75 hidden z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full mx-4 transform transition-all border-0">
+        <!-- Modal Header -->
+        <div class="bg-orange-600 dark:bg-orange-700 text-white px-6 py-4 rounded-t-lg">
+            <div class="flex items-center">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h3 class="text-xl font-bold">İlk Dolum Uyarısı</h3>
+            </div>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-6 bg-white dark:bg-slate-800">
+            <!-- Uyarı Mesajı -->
+            <div class="mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <div class="flex items-start">
+                    <svg class="h-6 w-6 text-orange-600 dark:text-orange-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                        <p class="font-semibold text-orange-800 dark:text-orange-200 mb-2">
+                            ⚠️ Bu ürüne daha önce ilk dolum yapılmıştır!
+                        </p>
+                        <p class="text-sm text-orange-700 dark:text-orange-300">
+                            <span id="ek_dolum_urun_adi" class="font-semibold">-</span> için minibar'da zaten stok bulunmaktadır.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bilgi Kartı -->
+            <div class="mb-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Zimmetinizde:</span>
+                        <span id="ek_dolum_zimmet" class="font-semibold text-slate-900 dark:text-slate-100">-</span>
+                    </div>
+                    <div class="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-2">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Minibar'daki Mevcut:</span>
+                        <span id="ek_dolum_mevcut" class="font-semibold text-green-600 dark:text-green-400">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Soru -->
+            <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
+                    💡 Ek Dolum Yapmak İster Misiniz?
+                </p>
+                <p class="text-xs text-blue-700 dark:text-blue-300">
+                    Ek dolum yaparsanız, minibar'daki ürün miktarı artırılacak ancak <strong>tüketim olarak kaydedilmeyecektir</strong>. 
+                    Bu işlem genellikle misafir talebi üzerine yapılır.
+                </p>
+            </div>
+
+            <!-- Ek Dolum Miktarı -->
+            <div id="ek_dolum_input_container" class="hidden">
+                <label for="ek_dolum_miktar" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Ek Dolum Miktarı <span class="text-red-500">*</span>
+                </label>
+                <input type="number" id="ek_dolum_miktar" min="0" step="0.01"
+                    class="appearance-none block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                    placeholder="Kaç adet eklenecek?">
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="bg-slate-50 dark:bg-slate-900 px-6 py-4 rounded-b-lg border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+            <button type="button" onclick="closeEkDolumModal()" 
+                class="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 shadow-sm text-sm font-medium rounded-md text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Hayır, İptal
+            </button>
+            <button type="button" id="ek_dolum_onayla_btn" onclick="onaylaEkDolum()"
+                class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span id="ek_dolum_btn_text">Evet, Ek Dolum Yap</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- QR Okuyucu Modal -->
 <div id="qr_modal" class="fixed inset-0 bg-slate-900 dark:bg-slate-950 bg-opacity-75 hidden z-50 flex items-center justify-center">
     <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 transform transition-all border-0">
@@ -868,7 +956,7 @@
     } );
 
     // İlk dolum için ürün seçimi
-    document.getElementById( 'urun_secim' ).addEventListener( 'change', function () {
+    document.getElementById( 'urun_secim' ).addEventListener( 'change', async function () {
         const urunId = this.value;
         const miktarInput = document.getElementById( 'urun_miktar' );
         const zimmetInfo = document.getElementById( 'zimmet_info' );
@@ -877,6 +965,11 @@
             miktarInput.disabled = true;
             zimmetInfo.classList.add( 'hidden' );
             return;
+        }
+
+        // Oda seçilmişse ilk dolum kontrolü yap
+        if (secilenOdaId) {
+            await checkIlkDolumDurumu(urunId);
         }
 
         const zimmet = mevcutZimmetler[urunId];
@@ -1154,6 +1247,145 @@
             }, 50 );
         }
     };
+
+    // Ek Dolum Fonksiyonları
+    let ekDolumUrunId = null;
+    let ekDolumUrunAdi = null;
+    let ekDolumMevcutStok = 0;
+
+    async function checkIlkDolumDurumu(urunId) {
+        if (!secilenOdaId) return;
+
+        try {
+            const response = await fetch(`/api/kat-sorumlusu/ilk-dolum-kontrol/${secilenOdaId}/${urunId}`);
+            const data = await response.json();
+
+            if (data.success && data.ilk_dolum_yapilmis) {
+                // İlk dolum yapılmış - ek dolum öner
+                ekDolumUrunId = urunId;
+                const urunSelect = document.getElementById('urun_secim');
+                ekDolumUrunAdi = urunSelect.options[urunSelect.selectedIndex].text;
+                ekDolumMevcutStok = data.mevcut_stok;
+
+                showEkDolumModal();
+            }
+        } catch (error) {
+            console.error('İlk dolum kontrolü hatası:', error);
+        }
+    }
+
+    function showEkDolumModal() {
+        const zimmet = mevcutZimmetler[ekDolumUrunId];
+        
+        // Modal bilgilerini doldur
+        document.getElementById('ek_dolum_urun_adi').textContent = ekDolumUrunAdi;
+        document.getElementById('ek_dolum_zimmet').textContent = zimmet ? 
+            `${zimmet.kalan} ${zimmet.birim}` : 'Zimmetinizde yok';
+        document.getElementById('ek_dolum_mevcut').textContent = `${ekDolumMevcutStok} ${zimmet ? zimmet.birim : ''}`;
+        
+        // Input container'ı gizle
+        document.getElementById('ek_dolum_input_container').classList.add('hidden');
+        document.getElementById('ek_dolum_miktar').value = '';
+        document.getElementById('ek_dolum_btn_text').textContent = 'Evet, Ek Dolum Yap';
+        
+        // Modal'ı göster
+        document.getElementById('ek_dolum_modal').classList.remove('hidden');
+    }
+
+    function closeEkDolumModal() {
+        document.getElementById('ek_dolum_modal').classList.add('hidden');
+        ekDolumUrunId = null;
+        ekDolumUrunAdi = null;
+        ekDolumMevcutStok = 0;
+        
+        // Ürün seçimini sıfırla
+        document.getElementById('urun_secim').value = '';
+        document.getElementById('urun_miktar').value = '';
+        document.getElementById('urun_miktar').disabled = true;
+        document.getElementById('zimmet_info').classList.add('hidden');
+    }
+
+    async function onaylaEkDolum() {
+        const inputContainer = document.getElementById('ek_dolum_input_container');
+        const miktarInput = document.getElementById('ek_dolum_miktar');
+        const btnText = document.getElementById('ek_dolum_btn_text');
+        const btn = document.getElementById('ek_dolum_onayla_btn');
+
+        // İlk tıklama - input göster
+        if (inputContainer.classList.contains('hidden')) {
+            inputContainer.classList.remove('hidden');
+            miktarInput.focus();
+            btnText.textContent = 'Kaydet';
+            return;
+        }
+
+        // İkinci tıklama - kaydet
+        const ekMiktar = parseFloat(miktarInput.value);
+
+        if (!ekMiktar || ekMiktar <= 0) {
+            alert('Lütfen geçerli bir miktar giriniz!');
+            miktarInput.focus();
+            return;
+        }
+
+        // Zimmet kontrolü
+        const zimmet = mevcutZimmetler[ekDolumUrunId];
+        if (!zimmet || zimmet.kalan < ekMiktar) {
+            alert(`Yetersiz zimmet! Zimmetinizde kalan: ${zimmet ? zimmet.kalan : 0} ${zimmet ? zimmet.birim : ''}`);
+            return;
+        }
+
+        // Butonu devre dışı bırak
+        btn.disabled = true;
+        btnText.textContent = 'Kaydediliyor...';
+
+        try {
+            const response = await fetch('/api/kat-sorumlusu/ek-dolum', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    oda_id: secilenOdaId,
+                    urun_id: ekDolumUrunId,
+                    ek_miktar: ekMiktar
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Başarı mesajı
+                alert(`✅ ${data.message}\n\nYeni Stok: ${data.yeni_stok}`);
+                
+                // Modal'ı kapat
+                closeEkDolumModal();
+                
+                // Zimmet bilgilerini yenile
+                await loadZimmetBilgileri();
+            } else {
+                alert('❌ Hata: ' + data.message);
+                btn.disabled = false;
+                btnText.textContent = 'Kaydet';
+            }
+        } catch (error) {
+            console.error('Ek dolum hatası:', error);
+            alert('❌ İşlem sırasında bir hata oluştu: ' + error.message);
+            btn.disabled = false;
+            btnText.textContent = 'Kaydet';
+        }
+    }
+
+    // ESC tuşu ile ek dolum modal'ını kapat
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const ekDolumModal = document.getElementById('ek_dolum_modal');
+            if (!ekDolumModal.classList.contains('hidden')) {
+                closeEkDolumModal();
+            }
+        }
+    });
 
     // QR Scanner Fonksiyonları
     function startQrScanner() {
