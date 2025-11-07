@@ -57,6 +57,9 @@ xls/
 *.bak
 *.old
 
+# Backup files
+app_backup_*.py
+
 # Documentation drafts
 DASHBOARD_GELIŞTIRMELERI.md
 SISTEM_OZETI.md

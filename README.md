@@ -108,7 +108,7 @@ Flask tabanlı, MySQL veritabanı kullanan profesyonel otel minibar yönetim sis
 
 ```
 prof/
-├── app.py                  # Ana Flask uygulaması
+├── app.py                  # Ana Flask uygulaması (Bootstrap + Kalan endpoint'ler)
 ├── config.py              # Konfigürasyon ayarları
 ├── models.py              # Veritabanı modelleri
 ├── forms.py               # Form tanımlamaları
@@ -118,8 +118,26 @@ prof/
 ├── railway.json          # Railway konfigürasyonu
 ├── runtime.txt           # Python versiyonu
 ├── .gitignore            # Git ignore kuralları
+├── routes/               # 🔄 Route Modülleri (Modüler Yapı)
+│   ├── __init__.py       # Merkezi route registration
+│   ├── error_handlers.py # Error handler'lar
+│   ├── auth_routes.py    # Authentication (login, logout, setup)
+│   ├── dashboard_routes.py # Dashboard'lar (rol bazlı)
+│   ├── sistem_yoneticisi_routes.py # Sistem yöneticisi işlemleri
+│   ├── admin_routes.py   # Admin temel işlemler (personel, ürün, grup)
+│   ├── admin_minibar_routes.py # Admin minibar yönetimi
+│   ├── admin_stok_routes.py # Admin stok yönetimi
+│   ├── admin_zimmet_routes.py # Admin zimmet yönetimi
+│   ├── depo_routes.py    # Depo sorumlusu işlemleri
+│   ├── admin_qr_routes.py # Admin QR yönetimi
+│   ├── kat_sorumlusu_qr_routes.py # Kat sorumlusu QR
+│   ├── kat_sorumlusu_ilk_dolum_routes.py # İlk dolum
+│   ├── misafir_qr_routes.py # Misafir QR
+│   └── dolum_talebi_routes.py # Dolum talepleri
 ├── docs/                 # 📚 Dokümantasyon (detaylı kılavuzlar)
 │   ├── README.md         # Dokümantasyon indeksi
+│   ├── refactoring_progress.md # Refactoring ilerleme raporu
+│   ├── refactoring_report.md # Detaylı refactoring raporu
 │   ├── KULLANIM_KLAVUZU_BOLUM_1.md
 │   ├── KULLANIM_KLAVUZU_BOLUM_2.md
 │   ├── KULLANIM_KLAVUZU_BOLUM_3.md
@@ -150,6 +168,17 @@ prof/
 └── tests/                # Test dosyaları
     └── test_config.py
 ```
+
+### 🔄 Modüler Yapı
+
+Proje, bakımı kolaylaştırmak için modüler yapıya dönüştürülmüştür:
+
+- **10 yeni route modülü** oluşturuldu
+- **53 endpoint** ayrı modüllere taşındı
+- **Merkezi route yönetimi** ile tek satırda tüm route'lar register edilir
+- **%38 kod azaltması** (6,746 → 4,167 satır)
+
+Detaylı bilgi için: [docs/refactoring_report.md](docs/refactoring_report.md)
 
 ## 👥 Kullanıcı Rolleri
 
@@ -223,6 +252,61 @@ Sistem hakkında detaylı bilgi için **[docs/](docs/)** klasörüne bakın:
 - **Charts**: Chart.js 4.4
 - **Reports**: OpenPyXL, ReportLab
 - **Deployment**: Railway.app
+- **Architecture**: Modular Blueprint Pattern
+
+## 🛠️ Geliştirici Kılavuzu
+
+### Yeni Endpoint Ekleme
+
+1. **İlgili route modülünü seç** (örn: `routes/admin_routes.py`)
+
+2. **Endpoint'i ekle:**
+```python
+@app.route('/yeni-endpoint', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def yeni_endpoint():
+    """Endpoint açıklaması"""
+    try:
+        # İşlem mantığı
+        return render_template('admin/yeni_sayfa.html')
+    except Exception as e:
+        log_hata(e, modul='yeni_endpoint')
+        flash('Hata mesajı', 'danger')
+        return redirect(url_for('dashboard'))
+```
+
+3. **Otomatik register:** Merkezi sistem otomatik olarak register eder
+
+### Yeni Route Modülü Oluşturma
+
+1. **Yeni dosya oluştur:** `routes/yeni_modul_routes.py`
+
+2. **Register fonksiyonu ekle:**
+```python
+def register_yeni_modul_routes(app):
+    """Yeni modül route'larını kaydet"""
+    
+    @app.route('/endpoint')
+    @login_required
+    def endpoint():
+        pass
+```
+
+3. **Merkezi register'a ekle:** `routes/__init__.py`
+```python
+from routes.yeni_modul_routes import register_yeni_modul_routes
+register_yeni_modul_routes(app)
+```
+
+### Kod Standartları
+
+- ✅ Her endpoint için try-except kullan
+- ✅ Log kaydı ekle (`log_islem`, `log_hata`)
+- ✅ Audit trail kullan (create, update, delete)
+- ✅ Flash mesajları ekle (success, danger, warning)
+- ✅ Türkçe yorum ve docstring
+- ✅ Decorator'ları unutma (@login_required, @role_required)
 
 ## 🐛 Sorun Giderme
 

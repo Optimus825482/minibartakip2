@@ -1,0 +1,393 @@
+"""
+Dashboard Route'ları
+
+Bu modül tüm kullanıcı rollerine ait dashboard endpoint'lerini içerir.
+
+Endpoint'ler:
+- /dashboard - Rol bazlı yönlendirme
+- /sistem-yoneticisi - Sistem yöneticisi dashboard
+- /depo - Depo sorumlusu dashboard
+- /kat-sorumlusu - Kat sorumlusu dashboard
+- /kat-sorumlusu/dashboard - Kat sorumlusu dashboard (alternatif)
+
+Roller:
+- sistem_yoneticisi
+- admin
+- depo_sorumlusu
+- kat_sorumlusu
+"""
+
+from flask import render_template, redirect, url_for, flash, session
+from datetime import datetime, timedelta
+
+from models import db, Kat, Oda, Kullanici, UrunGrup, Urun, StokHareket, PersonelZimmet, PersonelZimmetDetay, MinibarIslem, MinibarIslemDetay
+from utils.decorators import login_required, role_required
+from utils.helpers import get_kritik_stok_urunler, get_tum_urunler_stok_durumlari, get_kat_sorumlusu_kritik_stoklar
+
+
+def register_dashboard_routes(app):
+    """Dashboard route'larını kaydet"""
+    
+    @app.route('/dashboard')
+    @login_required
+    def dashboard():
+        """Rol bazlı dashboard yönlendirmesi"""
+        rol = session.get('rol')
+        
+        if rol == 'sistem_yoneticisi':
+            return redirect(url_for('sistem_yoneticisi_dashboard'))
+        elif rol == 'admin':
+            return redirect(url_for('sistem_yoneticisi_dashboard'))  # Admin de sistem yöneticisi panelini kullanır
+        elif rol == 'depo_sorumlusu':
+            return redirect(url_for('depo_dashboard'))
+        elif rol == 'kat_sorumlusu':
+            return redirect(url_for('kat_sorumlusu_dashboard'))
+        else:
+            flash('Geçersiz kullanıcı rolü!', 'danger')
+            return redirect(url_for('logout'))
+
+    
+    @app.route('/sistem-yoneticisi')
+    @login_required
+    @role_required('sistem_yoneticisi', 'admin')
+    def sistem_yoneticisi_dashboard():
+        """Sistem yöneticisi dashboard"""
+        # İstatistikler
+        toplam_kat = Kat.query.count()
+        toplam_oda = Oda.query.count()
+        toplam_kullanici = Kullanici.query.filter(
+            Kullanici.rol.in_(['admin', 'depo_sorumlusu', 'kat_sorumlusu']),
+            Kullanici.aktif.is_(True)
+        ).count()
+        toplam_personel = Kullanici.query.filter(
+            Kullanici.rol.in_(['depo_sorumlusu', 'kat_sorumlusu']),
+            Kullanici.aktif.is_(True)
+        ).count()
+        
+        # Son eklenen katlar
+        son_katlar = Kat.query.order_by(Kat.olusturma_tarihi.desc()).limit(5).all()
+        
+        # Son eklenen odalar
+        son_odalar = Oda.query.order_by(Oda.olusturma_tarihi.desc()).limit(5).all()
+        
+        # Grafik verileri
+        # Kullanıcı rol dağılımı
+        admin_count = Kullanici.query.filter_by(rol='admin', aktif=True).count()
+        depo_count = Kullanici.query.filter_by(rol='depo_sorumlusu', aktif=True).count()
+        kat_count = Kullanici.query.filter_by(rol='kat_sorumlusu', aktif=True).count()
+        
+        # Kat bazlı oda sayıları
+        katlar = Kat.query.filter_by(aktif=True).all()
+        kat_labels = [kat.kat_adi for kat in katlar]
+        kat_oda_sayilari = [len(kat.odalar) for kat in katlar]
+        
+        # Ürün grup sayıları (admin için)
+        toplam_urun_grup = UrunGrup.query.filter_by(aktif=True).count()
+        toplam_urun = Urun.query.filter_by(aktif=True).count()
+        kritik_urunler = get_kritik_stok_urunler()
+        
+        # Gelişmiş stok durumları
+        stok_durumlari = get_tum_urunler_stok_durumlari()
+        
+        # Son eklenen personeller (admin için)
+        son_personeller = Kullanici.query.filter(
+            Kullanici.rol.in_(['depo_sorumlusu', 'kat_sorumlusu']),
+            Kullanici.aktif.is_(True)
+        ).order_by(Kullanici.olusturma_tarihi.desc()).limit(5).all()
+        
+        # Son eklenen ürünler (admin için)
+        son_urunler = Urun.query.filter_by(aktif=True).order_by(Urun.olusturma_tarihi.desc()).limit(5).all()
+        
+        # Ürün bazlı tüketim verileri (Son 30 günün en çok tüketilen ürünleri)
+        bugun = datetime.now().date()
+        otuz_gun_once = bugun - timedelta(days=30)
+        
+        # Minibar işlemlerinden en çok tüketilen ürünleri al
+        urun_tuketim = db.session.query(
+            Urun.urun_adi,
+            db.func.sum(MinibarIslemDetay.tuketim).label('toplam_tuketim')
+        ).join(
+            MinibarIslemDetay, MinibarIslemDetay.urun_id == Urun.id
+        ).join(
+            MinibarIslem, MinibarIslem.id == MinibarIslemDetay.islem_id
+        ).filter(
+            db.func.date(MinibarIslem.islem_tarihi) >= otuz_gun_once,
+            MinibarIslemDetay.tuketim > 0
+        ).group_by(
+            Urun.id, Urun.urun_adi
+        ).order_by(
+            db.desc('toplam_tuketim')
+        ).limit(10).all()
+        
+        urun_labels = [u[0] for u in urun_tuketim]
+        urun_tuketim_miktarlari = [float(u[1] or 0) for u in urun_tuketim]
+        
+        return render_template('sistem_yoneticisi/dashboard.html',
+                             toplam_kat=toplam_kat,
+                             toplam_oda=toplam_oda,
+                             toplam_kullanici=toplam_kullanici,
+                             toplam_personel=toplam_personel,
+                             son_katlar=son_katlar,
+                             son_odalar=son_odalar,
+                             admin_count=admin_count,
+                             depo_count=depo_count,
+                             kat_count=kat_count,
+                             kat_labels=kat_labels,
+                             kat_oda_sayilari=kat_oda_sayilari,
+                             toplam_urun_grup=toplam_urun_grup,
+                             toplam_urun=toplam_urun,
+                             kritik_urunler=kritik_urunler,
+                             stok_durumlari=stok_durumlari,
+                             son_personeller=son_personeller,
+                             son_urunler=son_urunler,
+                             urun_labels=urun_labels,
+                             urun_tuketim_miktarlari=urun_tuketim_miktarlari)
+
+    
+    @app.route('/depo')
+    @login_required
+    @role_required('depo_sorumlusu')
+    def depo_dashboard():
+        """Depo sorumlusu dashboard"""
+        # İstatistikler
+        toplam_urun = Urun.query.filter_by(aktif=True).count()
+        kritik_urunler = get_kritik_stok_urunler()
+        aktif_zimmetler = PersonelZimmet.query.filter_by(durum='aktif').count()
+        
+        # Gelişmiş stok durumları
+        stok_durumlari = get_tum_urunler_stok_durumlari()
+        
+        # Zimmet iade istatistikleri
+        toplam_iade_edilen = db.session.query(db.func.sum(PersonelZimmetDetay.iade_edilen_miktar)).filter(
+            PersonelZimmetDetay.iade_edilen_miktar > 0
+        ).scalar() or 0
+        
+        # Bu ay yapılan iade işlemleri
+        ay_basi = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        bu_ay_iadeler = StokHareket.query.filter(
+            StokHareket.hareket_tipi == 'giris',
+            StokHareket.aciklama.like('%Zimmet iadesi%'),
+            StokHareket.islem_tarihi >= ay_basi
+        ).count()
+        
+        # İptal edilen zimmetler
+        iptal_zimmetler = PersonelZimmet.query.filter_by(durum='iptal').count()
+        
+        # Son stok hareketleri
+        son_hareketler = StokHareket.query.order_by(StokHareket.islem_tarihi.desc()).limit(10).all()
+        
+        # Grafik verileri
+        # Ürün grup bazlı stok durumu
+        gruplar = UrunGrup.query.filter_by(aktif=True).all()
+        grup_labels = []
+        grup_stok_miktarlari = []
+        
+        for grup in gruplar:
+            urunler = Urun.query.filter_by(grup_id=grup.id, aktif=True).all()
+            toplam_stok = 0
+            for urun in urunler:
+                # Mevcut stok hesapla
+                giris = db.session.query(db.func.sum(StokHareket.miktar)).filter(
+                    StokHareket.urun_id == urun.id,
+                    StokHareket.hareket_tipi == 'giris'
+                ).scalar() or 0
+                cikis = db.session.query(db.func.sum(StokHareket.miktar)).filter(
+                    StokHareket.urun_id == urun.id,
+                    StokHareket.hareket_tipi == 'cikis'
+                ).scalar() or 0
+                toplam_stok += (giris - cikis)
+            
+            if toplam_stok > 0:  # Sadece stoku olan grupları göster
+                grup_labels.append(grup.grup_adi)
+                grup_stok_miktarlari.append(toplam_stok)
+        
+        # Son 7 günün stok hareket istatistikleri
+        bugun = datetime.now().date()
+        gun_labels = []
+        giris_verileri = []
+        cikis_verileri = []
+        
+        for i in range(6, -1, -1):  # Son 7 gün
+            tarih = bugun - timedelta(days=i)
+            gun_labels.append(tarih.strftime('%d.%m'))
+            
+            # Giriş
+            giris = db.session.query(db.func.sum(StokHareket.miktar)).filter(
+                db.func.date(StokHareket.islem_tarihi) == tarih,
+                StokHareket.hareket_tipi == 'giris'
+            ).scalar() or 0
+            giris_verileri.append(float(giris))
+            
+            # Çıkış
+            cikis = db.session.query(db.func.sum(StokHareket.miktar)).filter(
+                db.func.date(StokHareket.islem_tarihi) == tarih,
+                StokHareket.hareket_tipi == 'cikis'
+            ).scalar() or 0
+            cikis_verileri.append(float(cikis))
+        
+        # Ürün bazlı tüketim verileri (Son 30 günün en çok tüketilen ürünleri)
+        otuz_gun_once = bugun - timedelta(days=30)
+        
+        # Minibar işlemlerinden en çok tüketilen ürünleri al
+        urun_tuketim = db.session.query(
+            Urun.urun_adi,
+            db.func.sum(MinibarIslemDetay.tuketim).label('toplam_tuketim')
+        ).join(
+            MinibarIslemDetay, MinibarIslemDetay.urun_id == Urun.id
+        ).join(
+            MinibarIslem, MinibarIslem.id == MinibarIslemDetay.islem_id
+        ).filter(
+            db.func.date(MinibarIslem.islem_tarihi) >= otuz_gun_once,
+            MinibarIslemDetay.tuketim > 0
+        ).group_by(
+            Urun.id, Urun.urun_adi
+        ).order_by(
+            db.desc('toplam_tuketim')
+        ).limit(10).all()
+        
+        urun_labels = [u[0] for u in urun_tuketim]
+        urun_tuketim_miktarlari = [float(u[1] or 0) for u in urun_tuketim]
+        
+        return render_template('depo_sorumlusu/dashboard.html',
+                             toplam_urun=toplam_urun,
+                             kritik_urunler=kritik_urunler,
+                             stok_durumlari=stok_durumlari,
+                             aktif_zimmetler=aktif_zimmetler,
+                             toplam_iade_edilen=toplam_iade_edilen,
+                             bu_ay_iadeler=bu_ay_iadeler,
+                             iptal_zimmetler=iptal_zimmetler,
+                             son_hareketler=son_hareketler,
+                             grup_labels=grup_labels,
+                             grup_stok_miktarlari=grup_stok_miktarlari,
+                             gun_labels=gun_labels,
+                             giris_verileri=giris_verileri,
+                             cikis_verileri=cikis_verileri,
+                             urun_labels=urun_labels,
+                             urun_tuketim_miktarlari=urun_tuketim_miktarlari)
+
+    
+    @app.route('/kat-sorumlusu')
+    @app.route('/kat-sorumlusu/dashboard')
+    @login_required
+    @role_required('kat_sorumlusu')
+    def kat_sorumlusu_dashboard():
+        """Kat sorumlusu dashboard"""
+        kullanici_id = session['kullanici_id']
+        
+        # İstatistikler
+        aktif_zimmetler = PersonelZimmet.query.filter_by(
+            personel_id=kullanici_id, 
+            durum='aktif'
+        ).count()
+        
+        # Zimmetindeki toplam ürün miktarı
+        zimmet_detaylari = db.session.query(
+            db.func.sum(PersonelZimmetDetay.kalan_miktar)
+        ).join(PersonelZimmet).filter(
+            PersonelZimmet.personel_id == kullanici_id,
+            PersonelZimmet.durum == 'aktif'
+        ).scalar() or 0
+        
+        # Kritik stok bilgileri
+        kritik_stoklar = get_kat_sorumlusu_kritik_stoklar(kullanici_id)
+        kritik_stok_sayisi = kritik_stoklar['istatistik']['kritik_sayisi']
+        stokout_sayisi = kritik_stoklar['istatistik']['stokout_sayisi']
+        
+        # Bugünkü kullanım (son 24 saat)
+        bugun_baslangic = datetime.now() - timedelta(days=1)
+        bugunun_kullanimi = db.session.query(
+            db.func.sum(MinibarIslemDetay.eklenen_miktar)
+        ).join(MinibarIslem).filter(
+            MinibarIslem.personel_id == kullanici_id,
+            MinibarIslem.islem_tarihi >= bugun_baslangic
+        ).scalar() or 0
+        
+        # Son minibar işlemleri
+        son_islemler = MinibarIslem.query.filter_by(
+            personel_id=kullanici_id
+        ).order_by(MinibarIslem.islem_tarihi.desc()).limit(10).all()
+        
+        # Grafik verileri - En çok kullanılan 5 ürün (son 7 gün)
+        yedi_gun_once = datetime.now() - timedelta(days=7)
+        en_cok_kullanilan = db.session.query(
+            Urun.urun_adi,
+            db.func.sum(MinibarIslemDetay.eklenen_miktar).label('toplam')
+        ).join(MinibarIslemDetay, MinibarIslemDetay.urun_id == Urun.id).join(
+            MinibarIslem, MinibarIslem.id == MinibarIslemDetay.islem_id
+        ).filter(
+            MinibarIslem.personel_id == kullanici_id,
+            MinibarIslem.islem_tarihi >= yedi_gun_once
+        ).group_by(Urun.id, Urun.urun_adi).order_by(
+            db.desc('toplam')
+        ).limit(5).all()
+        
+        en_cok_urun_labels = [u[0] for u in en_cok_kullanilan]
+        en_cok_urun_miktarlar = [float(u[1] or 0) for u in en_cok_kullanilan]
+        
+        # Zimmet kullanım durumu (ürün bazlı)
+        zimmet_urunler = db.session.query(
+            Urun.urun_adi,
+            db.func.sum(PersonelZimmetDetay.miktar).label('teslim_edilen'),
+            db.func.sum(PersonelZimmetDetay.kullanilan_miktar).label('kullanilan'),
+            db.func.sum(PersonelZimmetDetay.kalan_miktar).label('kalan')
+        ).join(Urun, PersonelZimmetDetay.urun_id == Urun.id).join(
+            PersonelZimmet, PersonelZimmetDetay.zimmet_id == PersonelZimmet.id
+        ).filter(
+            PersonelZimmet.personel_id == kullanici_id,
+            PersonelZimmet.durum == 'aktif'
+        ).group_by(Urun.id, Urun.urun_adi).all()
+        
+        zimmet_urun_labels = [u[0] for u in zimmet_urunler]
+        zimmet_kullanilan = [float(u[2] or 0) for u in zimmet_urunler]
+        zimmet_kalan = [float(u[3] or 0) for u in zimmet_urunler]
+        
+        # Günlük tüketim trendi (son 7 gün)
+        gunluk_tuketim = []
+        gunluk_labels = []
+        for i in range(6, -1, -1):
+            gun = datetime.now() - timedelta(days=i)
+            gun_baslangic = gun.replace(hour=0, minute=0, second=0, microsecond=0)
+            gun_bitis = gun_baslangic + timedelta(days=1)
+            
+            tuketim = db.session.query(
+                db.func.sum(MinibarIslemDetay.eklenen_miktar)
+            ).join(MinibarIslem).filter(
+                MinibarIslem.personel_id == kullanici_id,
+                MinibarIslem.islem_tarihi >= gun_baslangic,
+                MinibarIslem.islem_tarihi < gun_bitis
+            ).scalar() or 0
+            
+            gunluk_tuketim.append(float(tuketim))
+            gunluk_labels.append(gun.strftime('%d.%m'))
+        
+        # Minibar işlem tipi dağılımı
+        islem_ilk_dolum = MinibarIslem.query.filter_by(
+            personel_id=kullanici_id,
+            islem_tipi='ilk_dolum'
+        ).count()
+        islem_kontrol = MinibarIslem.query.filter_by(
+            personel_id=kullanici_id,
+            islem_tipi='kontrol'
+        ).count()
+        islem_doldurma = MinibarIslem.query.filter_by(
+            personel_id=kullanici_id,
+            islem_tipi='doldurma'
+        ).count()
+        
+        return render_template('kat_sorumlusu/dashboard.html',
+                             aktif_zimmetler=aktif_zimmetler,
+                             zimmet_toplam=zimmet_detaylari,
+                             kritik_stok_sayisi=kritik_stok_sayisi,
+                             stokout_sayisi=stokout_sayisi,
+                             bugunun_kullanimi=int(bugunun_kullanimi),
+                             son_islemler=son_islemler,
+                             en_cok_urun_labels=en_cok_urun_labels,
+                             en_cok_urun_miktarlar=en_cok_urun_miktarlar,
+                             zimmet_urun_labels=zimmet_urun_labels,
+                             zimmet_kullanilan=zimmet_kullanilan,
+                             zimmet_kalan=zimmet_kalan,
+                             gunluk_tuketim=gunluk_tuketim,
+                             gunluk_labels=gunluk_labels,
+                             islem_ilk_dolum=islem_ilk_dolum,
+                             islem_kontrol=islem_kontrol,
+                             islem_doldurma=islem_doldurma)
