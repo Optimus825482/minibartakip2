@@ -6668,6 +6668,10 @@ register_admin_qr_routes(app)
 from routes.kat_sorumlusu_qr_routes import register_kat_sorumlusu_qr_routes
 register_kat_sorumlusu_qr_routes(app)
 
+# Kat Sorumlusu İlk Dolum route'larını kaydet
+from routes.kat_sorumlusu_ilk_dolum_routes import register_kat_sorumlusu_ilk_dolum_routes
+register_kat_sorumlusu_ilk_dolum_routes(app)
+
 # Misafir QR route'larını kaydet
 from routes.misafir_qr_routes import register_misafir_qr_routes
 register_misafir_qr_routes(app)

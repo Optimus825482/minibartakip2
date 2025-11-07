@@ -219,7 +219,7 @@ class MinibarIslem(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     oda_id = db.Column(db.Integer, db.ForeignKey('odalar.id'), nullable=False)
     personel_id = db.Column(db.Integer, db.ForeignKey('kullanicilar.id'), nullable=False)
-    islem_tipi = db.Column(db.Enum('ilk_dolum', 'kontrol', 'doldurma'), nullable=False)
+    islem_tipi = db.Column(db.Enum('ilk_dolum', 'kontrol', 'doldurma', 'ek_dolum'), nullable=False)
     islem_tarihi = db.Column(db.DateTime, default=datetime.utcnow)
     aciklama = db.Column(db.Text)
     
