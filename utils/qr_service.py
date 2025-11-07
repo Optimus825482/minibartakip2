@@ -120,11 +120,19 @@ class QRKodService:
         """
         Token'ı doğrula ve oda bilgisini döndür
         Args:
-            token (str): Doğrulanacak token
+            token (str): Doğrulanacak token (URL veya token string)
         Returns:
             Oda | None: Geçerli ise Oda instance, değilse None
         """
         try:
+            # Eğer URL formatındaysa token'ı çıkar
+            # Örnek: http://localhost:5014/qr/ABC123 -> ABC123
+            if token.startswith('http://') or token.startswith('https://'):
+                # URL'den token'ı çıkar
+                parts = token.split('/qr/')
+                if len(parts) == 2:
+                    token = parts[1]
+            
             # Önce basit format kontrol et: MINIBAR_ODA_{oda_id}_KAT_{kat_id}
             if token.startswith('MINIBAR_ODA_'):
                 try:
@@ -144,7 +152,7 @@ class QRKodService:
                 except (ValueError, IndexError):
                     pass
             
-            # Eğer basit format değilse, veritabanında token ara (güvenli token sistemi)
+            # Veritabanında token ara (güvenli token sistemi)
             oda = Oda.query.filter_by(
                 qr_kod_token=token,
                 aktif=True

@@ -235,7 +235,7 @@ function yenidenDolumModalAc(urun) {
  */
 function yenidenDolumModalKapat() {
     document.getElementById('yeniden_dolum_modal').classList.add('hidden');
-    aktifUrun = null;
+    // NOT: aktifUrun'u burada null yapma, onay modalı için gerekli!
 }
 
 /**
@@ -279,6 +279,7 @@ function onayModalAc(eklenecekMiktar) {
  */
 function onayModalKapat() {
     document.getElementById('onay_modal').classList.add('hidden');
+    aktifUrun = null;  // Onay modalı kapanınca temizle
 }
 
 /**
@@ -309,7 +310,8 @@ async function islemOnayla() {
         if (data.success) {
             basariGoster(data.message || 'Dolum işlemi başarıyla tamamlandı');
             onayModalKapat();
-            
+            aktifUrun = null;  // İşlem başarılı, temizle
+
             // Ürün listesini yenile
             await minibarUrunleriniGetir(secilenOdaId);
         } else {
@@ -324,43 +326,155 @@ async function islemOnayla() {
 }
 
 /**
+ * HTTPS kontrolü yap
+ */
+function checkHttps() {
+    return window.location.protocol === 'https:';
+}
+
+/**
+ * Kamera izni kontrol et
+ */
+async function checkCameraPermission() {
+    try {
+        // Permissions API destekleniyor mu?
+        if (navigator.permissions && navigator.permissions.query) {
+            const permission = await navigator.permissions.query({ name: 'camera' });
+            console.log('Kamera izni durumu:', permission.state);
+            return permission.state;
+        }
+        return 'prompt'; // Varsayılan olarak sor
+    } catch (err) {
+        console.log('Permission API desteklenmiyor:', err);
+        return 'prompt';
+    }
+}
+
+/**
+ * Manuel oda seçimi
+ */
+function manuelOdaSecimi() {
+    qrModalKapat();
+    // Kullanıcıyı manuel seçim alanına yönlendir
+    document.getElementById('kat_id').focus();
+}
+
+/**
  * QR kod okutmayı başlat
  */
-function qrIleBaslat() {
+async function qrIleBaslat() {
     document.getElementById('qr_modal').classList.remove('hidden');
-    
+
+    // HTTPS kontrolü
+    if (!checkHttps()) {
+        console.warn('HTTPS bağlantısı yok, kamera erişimi engellenebilir');
+        document.getElementById('https_uyari').classList.remove('hidden');
+    }
+
     if (!qrScanner) {
         qrScanner = new Html5Qrcode("qr_reader");
+        console.log('Yeni QR scanner oluşturuldu');
     }
-    
-    qrScanner.start(
-        { facingMode: "environment" },
-        {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-        },
-        onQrCodeScanned,
-        onQrCodeError
-    ).catch(err => {
+
+    // Eğer scanner zaten çalışıyorsa önce durdur
+    if (qrScanner) {
+        try {
+            // isScanning metodu varsa kontrol et
+            const state = qrScanner.getState();
+            console.log('QR Scanner state:', state);
+
+            // State 2 = SCANNING
+            if (state === 2) {
+                console.log('Scanner zaten çalışıyor, önce durduruluyor...');
+                await qrScanner.stop();
+                console.log('Scanner durduruldu');
+                // Durdurulduktan sonra kısa bir bekleme
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        } catch (err) {
+            console.log('Scanner state kontrolü yapılamadı veya zaten durdurulmuş:', err.message);
+        }
+    }
+
+    // Optimize edilmiş QR okuma ayarları
+    const config = {
+        fps: 5,  // Daha yavaş tara (daha iyi algılama)
+        qrbox: { width: 300, height: 300 },  // Daha büyük tarama alanı
+        aspectRatio: 1.0,
+        disableFlip: false,
+        // Daha agresif tarama
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+        }
+    };
+
+    // Kamera ayarları - SADECE facingMode kullan (tek key)
+    const cameraConfig = { facingMode: "environment" };
+
+    try {
+        await qrScanner.start(
+            cameraConfig,
+            config,
+            onQrCodeScanned,
+            onQrCodeError
+        );
+        console.log('QR scanner başarıyla başlatıldı');
+    } catch (err) {
         console.error('QR okuyucu başlatılamadı:', err);
-        hataGoster('Kamera erişimi sağlanamadı');
-        qrModalKapat();
-    });
+
+        // Hata tipine göre mesaj göster
+        if (err.name === 'NotAllowedError' || err.message.includes('Permission')) {
+            // Kamera izni reddedildi
+            document.getElementById('kamera_izin_uyari').classList.remove('hidden');
+            hataGoster('Kamera iznini lütfen verin veya manuel oda seçimi yapın');
+        } else if (err.name === 'NotFoundError') {
+            // Kamera bulunamadı
+            hataGoster('Kamera bulunamadı. Manuel oda seçimi yapabilirsiniz');
+        } else if (err.name === 'NotSupportedError' || !checkHttps()) {
+            // HTTPS gerekli
+            document.getElementById('https_uyari').classList.remove('hidden');
+            hataGoster('HTTPS bağlantısı gerekli. Manuel oda seçimi yapabilirsiniz');
+        } else {
+            // Diğer hatalar
+            hataGoster('Kamera erişimi sağlanamadı. Manuel oda seçimi yapabilirsiniz');
+        }
+
+        console.log('Manuel oda seçimi için kullanıcı yönlendiriliyor...');
+        // Modal'ı kapatma, kullanıcı kendisi kapatabilir veya manuel seçim yapabilir
+    }
 }
 
 /**
  * QR kod okunduğunda
  */
 async function onQrCodeScanned(decodedText) {
-    // QR okuyucuyu durdur
+    console.log('✅ QR kod başarıyla okundu:', decodedText);
+    console.log('QR kod uzunluğu:', decodedText.length);
+    console.log('QR kod tipi:', typeof decodedText);
+
+    // QR scanner'ı durdur
     if (qrScanner) {
-        qrScanner.stop();
+        try {
+            const state = qrScanner.getState();
+            console.log('QR okunduktan sonra scanner state:', state);
+
+            // State 2 = SCANNING, sadece çalışıyorsa durdur
+            if (state === 2) {
+                await qrScanner.stop();
+                console.log('QR scanner durduruldu');
+            } else {
+                console.log('Scanner zaten durdurulmuş, state:', state);
+            }
+        } catch (err) {
+            console.log('QR scanner durdurma kontrolü hatası:', err.message);
+        }
     }
-    
-    qrModalKapat();
-    
+
+    // Modalı kapat
+    document.getElementById('qr_modal').classList.add('hidden');
+    console.log('QR modal kapatıldı');
+
     try {
-        // Token'ı parse et
         const response = await fetch('/api/kat-sorumlusu/qr-parse', {
             method: 'POST',
             headers: {
@@ -369,23 +483,38 @@ async function onQrCodeScanned(decodedText) {
             },
             body: JSON.stringify({ token: decodedText })
         });
-        
+
         const data = await response.json();
-        
+        console.log('QR parse yanıtı:', data);
+
         if (data.success) {
-            // Kat ve oda seçimini otomatik yap
-            document.getElementById('kat_id').value = data.data.kat_id;
+            // Önce kat seç
+            const katSelect = document.getElementById('kat_id');
+            katSelect.value = data.data.kat_id;
+            console.log('Kat dropdown değeri set edildi:', data.data.kat_id);
+
+            // Kat seçilince odaları yükle
             await katSecildi();
-            
-            document.getElementById('oda_id').value = data.data.oda_id;
+            console.log('Odalar yüklendi');
+
+            // Odaların yüklenmesi için kısa bir bekleme
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Sonra oda seç
+            const odaSelect = document.getElementById('oda_id');
+            odaSelect.value = data.data.oda_id;
+            console.log('Oda dropdown değeri set edildi:', data.data.oda_id);
+
+            // Oda seçilince ürünleri yükle
             await odaSecildi();
-            
+            console.log('Ürünler yüklendi');
+
             basariGoster(`Oda ${data.data.oda_no} seçildi`);
         } else {
             hataGoster(data.message || 'QR kod okunamadı');
         }
     } catch (error) {
-        console.error('Hata:', error);
+        console.error('QR kod hatası:', error);
         hataGoster('QR kod işlenirken hata oluştu');
     }
 }
@@ -393,19 +522,47 @@ async function onQrCodeScanned(decodedText) {
 /**
  * QR kod okuma hatası
  */
-function onQrCodeError(error) {
-    // Sessizce logla (sürekli hata mesajı gösterme)
-    console.debug('QR okuma hatası:', error);
+function onQrCodeError(errorMessage, error) {
+    // Sadece gerçek hataları logla (sürekli scan hataları değil)
+    if (errorMessage && !errorMessage.includes('NotFoundException')) {
+        console.warn('QR okuma hatası:', errorMessage, error);
+    }
 }
 
 /**
  * QR modalını kapat
  */
-function qrModalKapat() {
+async function qrModalKapat() {
     if (qrScanner) {
-        qrScanner.stop().catch(err => console.error('QR durdurma hatası:', err));
+        try {
+            const state = qrScanner.getState();
+            console.log('QR Modal kapatılırken scanner state:', state);
+
+            // State 2 = SCANNING, sadece çalışıyorsa durdur
+            if (state === 2) {
+                await qrScanner.stop();
+                console.log('QR scanner durduruldu (manuel)');
+            } else {
+                console.log('Scanner zaten durdurulmuş, state:', state);
+            }
+        } catch (err) {
+            console.log('QR durdurma kontrolü hatası:', err.message);
+        }
     }
     document.getElementById('qr_modal').classList.add('hidden');
+    console.log('QR modal kapatıldı (manuel)');
+}
+
+/**
+ * Test QR kodu (Debug amaçlı)
+ */
+function testQrCode() {
+    // İlk odanın test token'ını oluştur
+    const testToken = 'MINIBAR_ODA_1_KAT_1';
+    console.log('Test QR kodu simüle ediliyor:', testToken);
+
+    // QR okuma fonksiyonunu çağır
+    onQrCodeScanned(testToken);
 }
 
 /**
@@ -460,8 +617,23 @@ function hataGoster(mesaj) {
         </div>
     `;
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.remove();
     }, 3000);
 }
+
+// ESC tuşu ile modal kapatma (accessibility)
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('yeniden_dolum_modal').classList.contains('hidden')) {
+            yenidenDolumModalKapat();
+        }
+        if (!document.getElementById('onay_modal').classList.contains('hidden')) {
+            onayModalKapat();
+        }
+        if (!document.getElementById('qr_modal').classList.contains('hidden')) {
+            qrModalKapat();
+        }
+    }
+});

@@ -6683,7 +6683,7 @@ if __name__ == '__main__':
     print("🏨 OTEL MİNİBAR TAKİP SİSTEMİ")
     print("=" * 60)
     print()
-    
+
     # Veritabanını başlat
     if init_database():
         print()
@@ -6691,15 +6691,49 @@ if __name__ == '__main__':
         # Railway PORT environment variable desteği
         port = int(os.getenv('PORT', 5014))
         debug_mode = os.getenv('FLASK_ENV', 'development') == 'development'
-        
-        print(f"📍 Adres: http://0.0.0.0:{port}")
+
+        # HTTPS desteği için SSL context (mobil kamera erişimi için gerekli)
+        ssl_context = None
+        use_https = os.getenv('USE_HTTPS', 'false').lower() == 'true'
+
+        if use_https:
+            cert_file = os.path.join(os.path.dirname(__file__), 'cert.pem')
+            key_file = os.path.join(os.path.dirname(__file__), 'key.pem')
+
+            if os.path.exists(cert_file) and os.path.exists(key_file):
+                ssl_context = (cert_file, key_file)
+                print(f"🔒 HTTPS Aktif: https://0.0.0.0:{port}")
+                print(f"📱 Mobil erişim: https://<IP-ADRESINIZ>:{port}")
+                print("⚠️  Self-signed sertifika kullanıldığı için tarayıcıda güvenlik uyarısı alabilirsiniz.")
+                print("   Mobilde 'Advanced' > 'Proceed to site' seçeneğini kullanın.")
+            else:
+                print("⚠️  SSL sertifikası bulunamadı. Sertifika oluşturmak için:")
+                print("   python generate_ssl_cert.py")
+                print("📍 HTTP Modu: http://0.0.0.0:{port}")
+                print("⚠️  Mobil kamera erişimi için HTTPS gereklidir!")
+        else:
+            print(f"📍 HTTP Modu: http://0.0.0.0:{port}")
+            print("⚠️  Mobil kamera erişimi için HTTPS gereklidir!")
+            print("   HTTPS'i aktifleştirmek için .env dosyasına USE_HTTPS=true ekleyin")
+
         print("🌙 Dark/Light tema: Sağ üstten değiştirilebilir")
         print()
         print("Durdurmak için CTRL+C kullanın")
         print("=" * 60)
         print()
-        
-        app.run(debug=debug_mode, host='0.0.0.0', port=port)
+
+        try:
+            app.run(
+                debug=debug_mode,
+                host='0.0.0.0',
+                port=port,
+                ssl_context=ssl_context,
+                use_reloader=True
+            )
+        except Exception as e:
+            print(f"❌ Flask başlatma hatası: {e}")
+            import traceback
+            traceback.print_exc()
     else:
         print()
         print("❌ Uygulama başlatılamadı. Lütfen veritabanı ayarlarını kontrol edin.")
