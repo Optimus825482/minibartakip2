@@ -90,32 +90,65 @@ function onQRCodeScanned(qrUrl) {
             if (response.success) {
                 const data = response.data;
                 
-                // Form alanlarını doldur
+                // 1. Önce kat seç
                 if ($('#kat_id').length) {
-                    $('#kat_id').val(data.kat_id).trigger('change');
+                    $('#kat_id').val(data.kat_id);
+                    
+                    // 2. Kat change eventini manuel tetikle ve odaları yükle
+                    const katId = data.kat_id;
+                    const odaSelect = $('#oda_id');
+                    
+                    // Oda dropdown'unu temizle ve loading göster
+                    odaSelect.html('<option value="">Yükleniyor...</option>');
+                    odaSelect.prop('disabled', true);
+                    
+                    // Odaları yükle
+                    $.ajax({
+                        url: `/kat-odalari?kat_id=${katId}`,
+                        method: 'GET',
+                        success: function(odaData) {
+                            if (odaData.success && odaData.odalar.length > 0) {
+                                // Oda dropdown'unu doldur
+                                odaSelect.html('<option value="">Oda seçiniz...</option>');
+                                odaData.odalar.forEach(oda => {
+                                    odaSelect.append(`<option value="${oda.id}">${oda.oda_no}</option>`);
+                                });
+                                
+                                // Dropdown'u aktif et
+                                odaSelect.prop('disabled', false);
+                                
+                                // 3. Şimdi odayı seç
+                                odaSelect.val(data.oda_id);
+                                
+                                // 4. Oda seçimini tetikle
+                                secilenOdaId = data.oda_id;
+                                $('#islem_tipi').prop('disabled', false);
+                                
+                                // Başarı mesajı
+                                $('#qrResult').html(`
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-check-circle"></i> 
+                                        <strong>${data.kat_adi} - Oda ${data.oda_no}</strong> tanındı!
+                                    </div>
+                                `);
+                                
+                                toastr.success(`Oda ${data.oda_no} otomatik seçildi!`);
+                                
+                                // Modal'ı 2 saniye sonra kapat
+                                setTimeout(() => {
+                                    $('#qrScannerModal').modal('hide');
+                                }, 2000);
+                            } else {
+                                odaSelect.html('<option value="">Bu katta oda yok</option>');
+                                toastr.error('Bu katta oda bulunamadı');
+                            }
+                        },
+                        error: function() {
+                            odaSelect.html('<option value="">Hata oluştu</option>');
+                            toastr.error('Odalar yüklenirken hata oluştu');
+                        }
+                    });
                 }
-                
-                if ($('#oda_id').length) {
-                    // Oda dropdown'unu güncelle
-                    setTimeout(() => {
-                        $('#oda_id').val(data.oda_id).trigger('change');
-                    }, 500);
-                }
-                
-                // Başarı mesajı
-                $('#qrResult').html(`
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i> 
-                        <strong>${data.kat_adi} - Oda ${data.oda_no}</strong> tanındı!
-                    </div>
-                `);
-                
-                toastr.success(`Oda ${data.oda_no} otomatik seçildi!`);
-                
-                // Modal'ı 2 saniye sonra kapat
-                setTimeout(() => {
-                    $('#qrScannerModal').modal('hide');
-                }, 2000);
             } else {
                 $('#qrResult').html(`
                     <div class="alert alert-danger">
