@@ -93,24 +93,29 @@ def create_tables():
                 print(f"ℹ️  Mevcut tablolar bulundu: {len(existing_tables)} tablo")
                 for table in existing_tables:
                     print(f"   - {table}")
+                print("✅ Tablolar zaten mevcut, yeniden oluşturma atlanıyor")
             else:
                 print("ℹ️  Henüz tablo yok, yeni tablolar oluşturuluyor...")
-            
-            # Tüm tabloları oluştur
-            db.create_all()
-            
-            # Oluşturulan tabloları kontrol et
-            inspector = inspect(db.engine)
-            all_tables = inspector.get_table_names()
-            
-            print()
-            print(f"✅ Toplam {len(all_tables)} tablo hazır:")
-            for table in sorted(all_tables):
-                print(f"   ✓ {table}")
+                
+                # Tüm tabloları oluştur
+                db.create_all()
+                
+                # Oluşturulan tabloları kontrol et
+                inspector = inspect(db.engine)
+                all_tables = inspector.get_table_names()
+                
+                print()
+                print(f"✅ Toplam {len(all_tables)} tablo oluşturuldu:")
+                for table in sorted(all_tables):
+                    print(f"   ✓ {table}")
             
             return True
             
     except Exception as e:
+        # Index zaten var hatası görmezden gel
+        if 'already exists' in str(e).lower() or 'duplicate' in str(e).lower():
+            print(f"ℹ️  Index/constraint zaten mevcut, devam ediliyor...")
+            return True
         print(f"❌ Tablo oluşturma hatası: {e}")
         return False
 

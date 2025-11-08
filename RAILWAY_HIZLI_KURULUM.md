@@ -11,19 +11,23 @@
 
 ## 3️⃣ Environment Variables Ayarla
 
+### Yöntem 1: Otomatik (Önerilen)
+```bash
+python railway_setup.py
+```
+
+### Yöntem 2: Manuel
 **Variables** sekmesine git ve ekle:
 
 ```bash
-SECRET_KEY=BURAYA_64_KARAKTERLIK_RANDOM_STRING_YAZ
+DATABASE_URL=postgresql://postgres:NEOcbkYOOSzROELtJEuVZxdPphGLIXnx@shinkansen.proxy.rlwy.net:36747/railway
+SECRET_KEY=8f3a9b2c7d1e6f4a5b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a
 FLASK_ENV=production
 ENV=production
 DB_TYPE=postgresql
 ```
 
-### SECRET_KEY Oluştur:
-```bash
-python -c "import secrets; print(secrets.token_hex(32))"
-```
+⚠️ **NOT:** SECRET_KEY'i production'da mutlaka değiştir!
 
 ## 4️⃣ Deploy Et
 **Deploy** butonuna tıkla → Bekle (2-3 dakika)
