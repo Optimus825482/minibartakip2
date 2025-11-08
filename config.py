@@ -58,26 +58,29 @@ class Config:
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # PostgreSQL Optimized Engine Options
+    # PostgreSQL Optimized Engine Options - Railway Timeout Fix
     SQLALCHEMY_ENGINE_OPTIONS = {
-        # Connection Pool Configuration
-        'pool_size': 10,                    # Minimum connections
-        'max_overflow': 10,                 # Additional connections (total: 20)
-        'pool_timeout': 30,                 # Wait timeout (seconds)
-        'pool_recycle': 3600,               # Recycle connections after 1 hour
-        'pool_pre_ping': True,              # Health check before use
+        # Connection Pool Configuration - Railway için optimize edildi
+        'pool_size': 5,                     # Minimum connections (Railway için düşürüldü)
+        'max_overflow': 10,                 # Additional connections (total: 15)
+        'pool_timeout': 60,                 # Wait timeout artırıldı (60 saniye)
+        'pool_recycle': 1800,               # 30 dakikada bir recycle (Railway için)
+        'pool_pre_ping': True,              # Health check before use (ZORUNLU)
         
         # PostgreSQL Specific Options
         'connect_args': {
-            'connect_timeout': 10,
-            'options': '-c timezone=utc',
+            'connect_timeout': 30,          # Connection timeout artırıldı (30 saniye)
+            'options': '-c timezone=utc -c statement_timeout=30000',  # 30 saniye query timeout
             'application_name': 'minibar_takip',
             
-            # Keep-alive settings
+            # Keep-alive settings - Railway için optimize
             'keepalives': 1,
-            'keepalives_idle': 30,
+            'keepalives_idle': 60,          # 60 saniye idle
             'keepalives_interval': 10,
             'keepalives_count': 5,
+            
+            # TCP settings
+            'tcp_user_timeout': 30000,      # 30 saniye TCP timeout
         } if 'postgresql' in SQLALCHEMY_DATABASE_URI else {},
         
         # Execution Options

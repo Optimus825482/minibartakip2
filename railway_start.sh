@@ -1,0 +1,58 @@
+#!/bin/bash
+# Railway Başlangıç Script'i
+# Database bağlantısını kontrol eder ve uygulamayı başlatır
+
+echo "=========================================="
+echo "🚀 Railway Deployment Başlatılıyor..."
+echo "=========================================="
+
+# Health check çalıştır
+echo "🔍 Database bağlantısı kontrol ediliyor..."
+python railway_health_check.py
+
+if [ $? -eq 0 ]; then
+    echo "✅ Database bağlantısı başarılı!"
+    echo "🚀 Uygulama başlatılıyor..."
+    
+    # Gunicorn ile uygulamayı başlat
+    # Railway için optimize edilmiş ayarlar
+    exec gunicorn app:app \
+        --bind 0.0.0.0:$PORT \
+        --workers 2 \
+        --threads 4 \
+        --timeout 120 \
+        --keep-alive 5 \
+        --max-requests 1000 \
+        --max-requests-jitter 50 \
+        --access-logfile - \
+        --error-logfile - \
+        --log-level info
+else
+    echo "❌ Database bağlantısı başarısız!"
+    echo "⏳ 10 saniye bekleniyor ve tekrar denenecek..."
+    sleep 10
+    
+    # Tekrar dene
+    python railway_health_check.py
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Database bağlantısı başarılı (2. deneme)!"
+        echo "🚀 Uygulama başlatılıyor..."
+        
+        exec gunicorn app:app \
+            --bind 0.0.0.0:$PORT \
+            --workers 2 \
+            --threads 4 \
+            --timeout 120 \
+            --keep-alive 5 \
+            --max-requests 1000 \
+            --max-requests-jitter 50 \
+            --access-logfile - \
+            --error-logfile - \
+            --log-level info
+    else
+        echo "❌ Database bağlantısı hala başarısız!"
+        echo "🔧 Lütfen Railway dashboard'dan database ayarlarını kontrol edin"
+        exit 1
+    fi
+fi

@@ -6,6 +6,8 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 from datetime import datetime, timedelta, timezone
 import os
 import io
+import time
+import logging
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 from reportlab.lib.pagesizes import A4, landscape
@@ -17,6 +19,11 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from dotenv import load_dotenv
+from sqlalchemy.exc import OperationalError, TimeoutError
+
+# Logging ayarla
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # .env dosyasını yükle
 load_dotenv()
@@ -42,6 +49,40 @@ csrf = CSRFProtect(app)
 # Veritabanı başlat
 from models import db
 db.init_app(app)
+
+# Database Connection Retry Mekanizması - Railway Timeout Fix
+def init_db_with_retry(max_retries=3, retry_delay=2):
+    """
+    Database bağlantısını retry mekanizması ile başlat
+    Railway'de cold start veya network timeout sorunlarını çözer
+    """
+    for attempt in range(max_retries):
+        try:
+            with app.app_context():
+                # Database bağlantısını test et
+                db.engine.connect()
+                logger.info(f"✅ Database bağlantısı başarılı (Deneme {attempt + 1}/{max_retries})")
+                return True
+        except (OperationalError, TimeoutError) as e:
+            logger.warning(f"⚠️ Database bağlantı hatası (Deneme {attempt + 1}/{max_retries}): {str(e)}")
+            if attempt < max_retries - 1:
+                logger.info(f"🔄 {retry_delay} saniye sonra tekrar denenecek...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                logger.error(f"❌ Database bağlantısı {max_retries} denemeden sonra başarısız!")
+                raise
+        except Exception as e:
+            logger.error(f"❌ Beklenmeyen hata: {str(e)}")
+            raise
+    return False
+
+# Uygulama başlatıldığında database bağlantısını test et
+try:
+    init_db_with_retry()
+except Exception as e:
+    logger.error(f"❌ FATAL: Database başlatılamadı: {str(e)}")
+    # Production'da uygulama çalışmaya devam etsin, ilk request'te tekrar denenecek
 
 # Yardımcı modülleri import et
 from utils.decorators import login_required, role_required, setup_required, setup_not_completed

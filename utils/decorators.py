@@ -1,5 +1,31 @@
 from functools import wraps
 from flask import session, redirect, url_for, flash
+from sqlalchemy.exc import OperationalError, TimeoutError
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+def db_query_with_retry(query_func, max_retries=3, retry_delay=1):
+    """
+    Database query'lerini retry mekanizması ile çalıştır
+    Railway timeout sorunlarını çözer
+    """
+    for attempt in range(max_retries):
+        try:
+            return query_func()
+        except (OperationalError, TimeoutError) as e:
+            logger.warning(f"⚠️ DB Query timeout (Deneme {attempt + 1}/{max_retries}): {str(e)}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                retry_delay *= 1.5  # Exponential backoff
+            else:
+                logger.error(f"❌ DB Query {max_retries} denemeden sonra başarısız!")
+                raise
+        except Exception as e:
+            logger.error(f"❌ DB Query beklenmeyen hata: {str(e)}")
+            raise
+    return None
 
 def login_required(f):
     """Giriş yapmış kullanıcı kontrolü"""
@@ -62,10 +88,18 @@ def setup_required(f):
     def decorated_function(*args, **kwargs):
         from models import SistemAyar
         
-        setup_tamamlandi = SistemAyar.query.filter_by(anahtar='setup_tamamlandi').first()
-        
-        if not setup_tamamlandi or setup_tamamlandi.deger != '1':
-            return redirect(url_for('setup'))
+        try:
+            # Retry mekanizması ile query çalıştır
+            setup_tamamlandi = db_query_with_retry(
+                lambda: SistemAyar.query.filter_by(anahtar='setup_tamamlandi').first()
+            )
+            
+            if not setup_tamamlandi or setup_tamamlandi.deger != '1':
+                return redirect(url_for('setup'))
+        except Exception as e:
+            logger.error(f"❌ Setup kontrolü başarısız: {str(e)}")
+            flash('Veritabanı bağlantı hatası. Lütfen tekrar deneyin.', 'danger')
+            return redirect(url_for('login'))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -77,11 +111,19 @@ def setup_not_completed(f):
     def decorated_function(*args, **kwargs):
         from models import SistemAyar
         
-        setup_tamamlandi = SistemAyar.query.filter_by(anahtar='setup_tamamlandi').first()
-        
-        if setup_tamamlandi and setup_tamamlandi.deger == '1':
-            flash('Setup zaten tamamlanmış.', 'info')
-            return redirect(url_for('login'))
+        try:
+            # Retry mekanizması ile query çalıştır
+            setup_tamamlandi = db_query_with_retry(
+                lambda: SistemAyar.query.filter_by(anahtar='setup_tamamlandi').first()
+            )
+            
+            if setup_tamamlandi and setup_tamamlandi.deger == '1':
+                flash('Setup zaten tamamlanmış.', 'info')
+                return redirect(url_for('login'))
+        except Exception as e:
+            logger.error(f"❌ Setup kontrolü başarısız: {str(e)}")
+            # Setup sayfasına devam et
+            pass
         
         return f(*args, **kwargs)
     return decorated_function
