@@ -1170,34 +1170,7 @@ def register_api_routes(app):
             log_hata(e, modul='api_kat_odalar')
             return jsonify({'error': str(e)}), 500
     
-    # AJAX endpoint - Otele göre katları getir
-    @app.route('/api/oteller/<int:otel_id>/katlar')
-    @login_required
-    @role_required('sistem_yoneticisi', 'admin')
-    def api_otel_katlar(otel_id):
-        """Otele göre katları getir"""
-        try:
-            from models import Otel, Kat
-            
-            # Otel var mı kontrol et
-            otel = Otel.query.get_or_404(otel_id)
-            
-            # Sadece aktif katları getir
-            katlar = Kat.query.filter_by(
-                otel_id=otel_id,
-                aktif=True
-            ).order_by(Kat.kat_no).all()
-            
-            return jsonify([{
-                'id': kat.id,
-                'kat_adi': kat.kat_adi,
-                'kat_no': kat.kat_no
-            } for kat in katlar])
-            
-        except Exception as e:
-            log_hata(e, modul='api_otel_katlar')
-            return jsonify({'error': str(e)}), 500
-    
+
     # AJAX endpoint - Kat bilgisini getir (otel_id dahil)
     @app.route('/api/kat-bilgi/<int:kat_id>')
     @login_required
@@ -1222,3 +1195,35 @@ def register_api_routes(app):
         except Exception as e:
             log_hata(e, modul='api_kat_bilgi')
             return jsonify({'success': False, 'error': str(e)}), 500
+    
+    # AJAX endpoint - Otele göre depo sorumlularını getir
+    @app.route('/api/oteller/<int:otel_id>/depo-sorumluları')
+    @login_required
+    @role_required('sistem_yoneticisi', 'admin')
+    def api_otel_depo_sorumluları(otel_id):
+        """Otele atanmış depo sorumlularını getir"""
+        try:
+            from models import Otel, Kullanici, KullaniciOtel
+            
+            # Otel var mı kontrol et
+            otel = Otel.query.get_or_404(otel_id)
+            
+            # Bu otele atanmış depo sorumlularını getir
+            depo_sorumlular = db.session.query(Kullanici).join(
+                KullaniciOtel, Kullanici.id == KullaniciOtel.kullanici_id
+            ).filter(
+                KullaniciOtel.otel_id == otel_id,
+                Kullanici.rol == 'depo_sorumlusu',
+                Kullanici.aktif == True
+            ).order_by(Kullanici.ad, Kullanici.soyad).all()
+            
+            return jsonify([{
+                'id': depo.id,
+                'ad': depo.ad,
+                'soyad': depo.soyad,
+                'kullanici_adi': depo.kullanici_adi
+            } for depo in depo_sorumlular])
+            
+        except Exception as e:
+            log_hata(e, modul='api_otel_depo_sorumluları')
+            return jsonify({'error': str(e)}), 500
