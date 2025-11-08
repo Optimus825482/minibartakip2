@@ -1169,3 +1169,56 @@ def register_api_routes(app):
         except Exception as e:
             log_hata(e, modul='api_kat_odalar')
             return jsonify({'error': str(e)}), 500
+    
+    # AJAX endpoint - Otele göre katları getir
+    @app.route('/api/oteller/<int:otel_id>/katlar')
+    @login_required
+    @role_required('sistem_yoneticisi', 'admin')
+    def api_otel_katlar(otel_id):
+        """Otele göre katları getir"""
+        try:
+            from models import Otel, Kat
+            
+            # Otel var mı kontrol et
+            otel = Otel.query.get_or_404(otel_id)
+            
+            # Sadece aktif katları getir
+            katlar = Kat.query.filter_by(
+                otel_id=otel_id,
+                aktif=True
+            ).order_by(Kat.kat_no).all()
+            
+            return jsonify([{
+                'id': kat.id,
+                'kat_adi': kat.kat_adi,
+                'kat_no': kat.kat_no
+            } for kat in katlar])
+            
+        except Exception as e:
+            log_hata(e, modul='api_otel_katlar')
+            return jsonify({'error': str(e)}), 500
+    
+    # AJAX endpoint - Kat bilgisini getir (otel_id dahil)
+    @app.route('/api/kat-bilgi/<int:kat_id>')
+    @login_required
+    @role_required('sistem_yoneticisi', 'admin')
+    def api_kat_bilgi(kat_id):
+        """Kat bilgisini getir"""
+        try:
+            from models import Kat
+            
+            # Kat var mı kontrol et
+            kat = Kat.query.get_or_404(kat_id)
+            
+            return jsonify({
+                'success': True,
+                'id': kat.id,
+                'kat_adi': kat.kat_adi,
+                'kat_no': kat.kat_no,
+                'otel_id': kat.otel_id,
+                'otel_adi': kat.otel.ad if kat.otel else None
+            })
+            
+        except Exception as e:
+            log_hata(e, modul='api_kat_bilgi')
+            return jsonify({'success': False, 'error': str(e)}), 500

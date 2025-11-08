@@ -246,6 +246,25 @@ function odaDuzenle(odaId, odaNo, katId, qrVar) {
     $('#duzenleOdaNoInput').val(odaNo);
     $('#duzenleKatId').val(katId);
     
+    // Kat bilgisinden otel ID'sini al ve otel dropdown'unu set et
+    $.ajax({
+        url: `/api/kat-bilgi/${katId}`,
+        method: 'GET',
+        success: function(response) {
+            if (response.success && response.otel_id) {
+                $('#duzenleOtelId').val(response.otel_id);
+                // Otele göre katları yükle
+                yukleKatlar(response.otel_id, 'duzenleKatId', function() {
+                    // Katlar yüklendikten sonra mevcut katı seç
+                    $('#duzenleKatId').val(katId);
+                });
+            }
+        },
+        error: function() {
+            console.error('Kat bilgisi alınamadı');
+        }
+    });
+    
     // QR kod varsa göster
     if (qrVar) {
         // QR kodunu yükle
@@ -281,10 +300,11 @@ $(document).ready(function() {
         e.preventDefault();
         
         const odaId = $('#duzenleOdaId').val();
+        const otelId = $('#duzenleOtelId').val();
         const katId = $('#duzenleKatId').val();
         const odaNo = $('#duzenleOdaNoInput').val().trim();
         
-        if (!katId || !odaNo) {
+        if (!otelId || !katId || !odaNo) {
             showModalAlert('odaDuzenleAlert', 'error', 'Lütfen tüm alanları doldurun');
             return;
         }
@@ -294,6 +314,7 @@ $(document).ready(function() {
             method: 'POST',
             data: {
                 csrf_token: $('meta[name="csrf-token"]').attr('content'),
+                otel_id: otelId,
                 kat_id: katId,
                 oda_no: odaNo
             },
@@ -419,10 +440,11 @@ $(document).ready(function() {
     $('#yeniOdaForm').on('submit', function(e) {
         e.preventDefault();
         
+        const otelId = $('#yeniOtelId').val();
         const katId = $('#yeniKatId').val();
         const odaNo = $('#yeniOdaNo').val().trim();
         
-        if (!katId || !odaNo) {
+        if (!otelId || !katId || !odaNo) {
             showModalAlert('yeniOdaAlert', 'error', 'Lütfen tüm alanları doldurun');
             return;
         }
@@ -436,6 +458,7 @@ $(document).ready(function() {
             method: 'POST',
             data: {
                 csrf_token: $('meta[name="csrf-token"]').attr('content'),
+                otel_id: otelId,
                 kat_id: katId,
                 oda_no: odaNo
             },
