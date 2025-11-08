@@ -14,7 +14,7 @@ def register_dolum_talebi_routes(app):
     
     @app.route('/api/dolum-talepleri')
     @login_required
-    @role_required('kat_sorumlusu')
+    @role_required('kat_sorumlusu', 'sistem_yoneticisi', 'admin')
     def api_dolum_talepleri():
         """Bekleyen dolum taleplerini listele"""
         try:
@@ -58,7 +58,7 @@ def register_dolum_talebi_routes(app):
     
     @app.route('/api/dolum-talebi-tamamla/<int:talep_id>', methods=['POST'])
     @login_required
-    @role_required('kat_sorumlusu')
+    @role_required('kat_sorumlusu', 'sistem_yoneticisi', 'admin')
     def api_dolum_talebi_tamamla(talep_id):
         """Dolum talebini tamamla"""
         try:
@@ -105,7 +105,7 @@ def register_dolum_talebi_routes(app):
     
     @app.route('/api/dolum-talebi-iptal/<int:talep_id>', methods=['POST'])
     @login_required
-    @role_required('kat_sorumlusu')
+    @role_required('kat_sorumlusu', 'sistem_yoneticisi', 'admin')
     def api_dolum_talebi_iptal(talep_id):
         """Dolum talebini iptal et"""
         try:
@@ -152,7 +152,7 @@ def register_dolum_talebi_routes(app):
     # Admin API'leri
     @app.route('/api/dolum-talepleri-admin')
     @login_required
-    @role_required('sistem_yoneticisi')
+    @role_required('sistem_yoneticisi', 'admin')
     def api_dolum_talepleri_admin():
         """Admin için tüm dolum taleplerini listele"""
         try:
@@ -208,7 +208,7 @@ def register_dolum_talebi_routes(app):
     
     @app.route('/api/dolum-talepleri-istatistik')
     @login_required
-    @role_required('sistem_yoneticisi')
+    @role_required('sistem_yoneticisi', 'admin')
     def api_dolum_talepleri_istatistik():
         """Dolum talepleri istatistikleri"""
         try:
