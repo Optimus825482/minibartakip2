@@ -349,6 +349,130 @@ class DataCollector:
             logger.error(f"❌ Doluluk metrik toplama hatası: {str(e)}")
             return 0
     
+    def collect_talep_metrics(self):
+        """
+        Misafir dolum talep metriklerini topla
+        Returns: Toplanan metrik sayısı
+        """
+        try:
+            from models import MinibarDolumTalebi, Oda, MLMetric
+            
+            # Son 24 saatlik talepler
+            son_24_saat = datetime.now(timezone.utc) - timedelta(hours=24)
+            
+            talepler = MinibarDolumTalebi.query.filter(
+                MinibarDolumTalebi.talep_tarihi >= son_24_saat
+            ).all()
+            
+            collected_count = 0
+            timestamp = datetime.now(timezone.utc)
+            
+            # Oda bazlı talep yoğunluğu
+            oda_talep_sayilari = {}
+            
+            for talep in talepler:
+                # Talep yanıt süresi (tamamlanan talepler için)
+                if talep.durum == 'tamamlandi' and talep.tamamlanma_tarihi:
+                    yanit_sure = (talep.tamamlanma_tarihi - talep.talep_tarihi).total_seconds() / 60  # dakika
+                    
+                    metric = MLMetric(
+                        metric_type='talep_yanit_sure',
+                        entity_type='oda',
+                        entity_id=talep.oda_id,
+                        metric_value=float(yanit_sure),
+                        timestamp=timestamp,
+                        extra_data={
+                            'oda_no': talep.oda.oda_no if talep.oda else None,
+                            'talep_id': talep.id
+                        }
+                    )
+                    self.db.session.add(metric)
+                    collected_count += 1
+                
+                # Talep yoğunluğu sayımı
+                if talep.oda_id not in oda_talep_sayilari:
+                    oda_talep_sayilari[talep.oda_id] = 0
+                oda_talep_sayilari[talep.oda_id] += 1
+            
+            # Talep yoğunluğu metriklerini kaydet
+            for oda_id, talep_sayisi in oda_talep_sayilari.items():
+                oda = Oda.query.filter_by(id=oda_id).first()
+                if oda:
+                    metric = MLMetric(
+                        metric_type='talep_yogunluk',
+                        entity_type='oda',
+                        entity_id=oda_id,
+                        metric_value=float(talep_sayisi),
+                        timestamp=timestamp,
+                        extra_data={
+                            'oda_no': oda.oda_no,
+                            'kat': oda.kat.kat_adi if oda.kat else None
+                        }
+                    )
+                    self.db.session.add(metric)
+                    collected_count += 1
+            
+            self.db.session.commit()
+            logger.info(f"✅ Talep metrikleri toplandı: {collected_count} kayıt")
+            return collected_count
+            
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"❌ Talep metrik toplama hatası: {str(e)}")
+            return 0
+    
+    def collect_qr_metrics(self):
+        """
+        QR okutma metriklerini topla
+        Returns: Toplanan metrik sayısı
+        """
+        try:
+            from models import QRKodOkutmaLog, Kullanici, MLMetric
+            
+            # Son 24 saatlik QR okutmalar
+            son_24_saat = datetime.now(timezone.utc) - timedelta(hours=24)
+            
+            # Kat sorumluları
+            kat_sorumlulari = Kullanici.query.filter_by(
+                rol='kat_sorumlusu',
+                aktif=True
+            ).all()
+            
+            collected_count = 0
+            timestamp = datetime.now(timezone.utc)
+            
+            for personel in kat_sorumlulari:
+                # Bu personelin son 24 saatteki QR okutma sayısı
+                qr_count = QRKodOkutmaLog.query.filter(
+                    QRKodOkutmaLog.kullanici_id == personel.id,
+                    QRKodOkutmaLog.okutma_tarihi >= son_24_saat,
+                    QRKodOkutmaLog.basarili == True
+                ).count()
+                
+                if qr_count > 0:
+                    metric = MLMetric(
+                        metric_type='qr_okutma_siklik',
+                        entity_type='kat_sorumlusu',
+                        entity_id=personel.id,
+                        metric_value=float(qr_count),
+                        timestamp=timestamp,
+                        extra_data={
+                            'personel_adi': f"{personel.ad} {personel.soyad}",
+                            'okutma_sayisi': qr_count
+                        }
+                    )
+                    self.db.session.add(metric)
+                    collected_count += 1
+            
+            self.db.session.commit()
+            logger.info(f"✅ QR metrikleri toplandı: {collected_count} kayıt")
+            return collected_count
+            
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"❌ QR metrik toplama hatası: {str(e)}")
+            return 0
+    
     def collect_all_metrics(self):
         """
         Tüm metrikleri topla
@@ -362,8 +486,10 @@ class DataCollector:
             dolum_count = self.collect_dolum_metrics()
             zimmet_count = self.collect_zimmet_metrics()
             occupancy_count = self.collect_occupancy_metrics()
+            talep_count = self.collect_talep_metrics()
+            qr_count = self.collect_qr_metrics()
             
-            total_count = stok_count + tuketim_count + dolum_count + zimmet_count + occupancy_count
+            total_count = stok_count + tuketim_count + dolum_count + zimmet_count + occupancy_count + talep_count + qr_count
             
             logger.info(f"✅ Toplam {total_count} metrik toplandı")
             logger.info(f"   - Stok: {stok_count}")
@@ -371,6 +497,8 @@ class DataCollector:
             logger.info(f"   - Dolum: {dolum_count}")
             logger.info(f"   - Zimmet: {zimmet_count}")
             logger.info(f"   - Doluluk: {occupancy_count}")
+            logger.info(f"   - Talep: {talep_count}")
+            logger.info(f"   - QR: {qr_count}")
             
             return total_count
             

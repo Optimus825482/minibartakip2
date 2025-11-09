@@ -504,6 +504,151 @@ class AnomalyDetector:
             logger.error(f"❌ Doluluk anomali tespiti hatası: {str(e)}")
             return 0
     
+    def detect_talep_anomalies(self):
+        """
+        Talep anomalilerini tespit et
+        Returns: Oluşturulan alert sayısı
+        """
+        try:
+            from models import MinibarDolumTalebi, MLAlert, Oda
+            
+            # Bekleyen talepler (30 dakikadan uzun)
+            otuz_dakika_once = datetime.now(timezone.utc) - timedelta(minutes=30)
+            
+            bekleyen_talepler = MinibarDolumTalebi.query.filter(
+                MinibarDolumTalebi.durum == 'beklemede',
+                MinibarDolumTalebi.talep_tarihi <= otuz_dakika_once
+            ).all()
+            
+            alert_count = 0
+            
+            for talep in bekleyen_talepler:
+                # Bu talep için son 1 saatte alert var mı?
+                son_1_saat = datetime.now(timezone.utc) - timedelta(hours=1)
+                existing_alert = MLAlert.query.filter(
+                    MLAlert.alert_type == 'talep_yanitlanmadi',
+                    MLAlert.entity_type == 'oda',
+                    MLAlert.entity_id == talep.oda_id,
+                    MLAlert.created_at >= son_1_saat,
+                    MLAlert.is_false_positive == False
+                ).first()
+                
+                if not existing_alert:
+                    bekle_sure = (datetime.now(timezone.utc) - talep.talep_tarihi).total_seconds() / 60
+                    
+                    # Severity belirle
+                    if bekle_sure >= 120:  # 2 saat
+                        severity = 'kritik'
+                    elif bekle_sure >= 60:  # 1 saat
+                        severity = 'yuksek'
+                    else:
+                        severity = 'orta'
+                    
+                    oda = Oda.query.filter_by(id=talep.oda_id).first()
+                    message = f"Oda {oda.oda_no if oda else talep.oda_id} dolum talebi {int(bekle_sure)} dakikadır bekliyor"
+                    suggested_action = "Kat sorumlusuna bildirim gönderin. Misafir memnuniyetsizliği riski var."
+                    
+                    alert = MLAlert(
+                        alert_type='talep_yanitlanmadi',
+                        severity=severity,
+                        entity_type='oda',
+                        entity_id=talep.oda_id,
+                        metric_value=bekle_sure,
+                        expected_value=15.0,  # Beklenen yanıt süresi 15 dakika
+                        deviation_percent=((bekle_sure - 15) / 15 * 100),
+                        message=message,
+                        suggested_action=suggested_action
+                    )
+                    self.db.session.add(alert)
+                    alert_count += 1
+            
+            self.db.session.commit()
+            
+            if alert_count > 0:
+                logger.info(f"⚠️  {alert_count} talep anomalisi tespit edildi")
+            
+            return alert_count
+            
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"❌ Talep anomali tespiti hatası: {str(e)}")
+            return 0
+    
+    def detect_qr_anomalies(self):
+        """
+        QR kullanım anomalilerini tespit et
+        Returns: Oluşturulan alert sayısı
+        """
+        try:
+            from models import MLMetric, MLAlert, Kullanici
+            
+            # Son 7 günlük QR metriklerini al
+            son_7_gun = datetime.now(timezone.utc) - timedelta(days=7)
+            
+            # Kat sorumluları
+            kat_sorumlulari = Kullanici.query.filter_by(
+                rol='kat_sorumlusu',
+                aktif=True
+            ).all()
+            
+            alert_count = 0
+            
+            for personel in kat_sorumlulari:
+                # Son 7 günlük QR okutma metrikleri
+                qr_metrikler = MLMetric.query.filter(
+                    MLMetric.metric_type == 'qr_okutma_siklik',
+                    MLMetric.entity_type == 'kat_sorumlusu',
+                    MLMetric.entity_id == personel.id,
+                    MLMetric.timestamp >= son_7_gun
+                ).all()
+                
+                if len(qr_metrikler) >= 3:
+                    ortalama = sum([m.metric_value for m in qr_metrikler]) / len(qr_metrikler)
+                    son_deger = qr_metrikler[-1].metric_value
+                    
+                    # Ortalamadan %50 az QR okutma varsa
+                    if ortalama > 5 and son_deger < (ortalama * 0.5):
+                        # Son 24 saatte alert var mı?
+                        son_24_saat = datetime.now(timezone.utc) - timedelta(hours=24)
+                        existing_alert = MLAlert.query.filter(
+                            MLAlert.alert_type == 'qr_kullanim_dusuk',
+                            MLAlert.entity_type == 'kat_sorumlusu',
+                            MLAlert.entity_id == personel.id,
+                            MLAlert.created_at >= son_24_saat,
+                            MLAlert.is_false_positive == False
+                        ).first()
+                        
+                        if not existing_alert:
+                            severity = 'orta'
+                            message = f"{personel.ad} {personel.soyad} QR sistemi kullanımı düşük (Bugün: {int(son_deger)}, Ortalama: {int(ortalama)})"
+                            suggested_action = "QR sistemi kullanımını teşvik edin. Manuel işlem yerine QR okutma daha güvenli."
+                            
+                            alert = MLAlert(
+                                alert_type='qr_kullanim_dusuk',
+                                severity=severity,
+                                entity_type='kat_sorumlusu',
+                                entity_id=personel.id,
+                                metric_value=son_deger,
+                                expected_value=ortalama,
+                                deviation_percent=((ortalama - son_deger) / ortalama * 100),
+                                message=message,
+                                suggested_action=suggested_action
+                            )
+                            self.db.session.add(alert)
+                            alert_count += 1
+            
+            self.db.session.commit()
+            
+            if alert_count > 0:
+                logger.info(f"⚠️  {alert_count} QR anomalisi tespit edildi")
+            
+            return alert_count
+            
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"❌ QR anomali tespiti hatası: {str(e)}")
+            return 0
+    
     def detect_all_anomalies(self):
         """
         Tüm anomali tiplerini tespit et
@@ -517,8 +662,10 @@ class AnomalyDetector:
             dolum_count = self.detect_dolum_anomalies()
             zimmet_count = self.detect_zimmet_anomalies()
             occupancy_count = self.detect_occupancy_anomalies()
+            talep_count = self.detect_talep_anomalies()
+            qr_count = self.detect_qr_anomalies()
             
-            total_count = stok_count + tuketim_count + dolum_count + zimmet_count + occupancy_count
+            total_count = stok_count + tuketim_count + dolum_count + zimmet_count + occupancy_count + talep_count + qr_count
             
             if total_count > 0:
                 logger.info(f"⚠️  Toplam {total_count} anomali tespit edildi")
@@ -527,6 +674,8 @@ class AnomalyDetector:
                 logger.info(f"   - Dolum: {dolum_count}")
                 logger.info(f"   - Zimmet: {zimmet_count}")
                 logger.info(f"   - Doluluk: {occupancy_count}")
+                logger.info(f"   - Talep: {talep_count}")
+                logger.info(f"   - QR: {qr_count}")
             else:
                 logger.info("✅ Anomali tespit edilmedi")
             

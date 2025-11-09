@@ -661,6 +661,15 @@ class MLMetricType(str, enum.Enum):
     ZIMMET_FIRE = 'zimmet_fire'              # Fire/kayıp oranı
     DOLULUK_ORAN = 'doluluk_oran'            # Otel doluluk oranı
     BOSTA_TUKETIM = 'bosta_tuketim'          # Boş odada tüketim
+    # Phase 3 - QR & Talep Sistemi
+    TALEP_YANIT_SURE = 'talep_yanit_sure'    # Talep yanıt süresi (dakika)
+    TALEP_YOGUNLUK = 'talep_yogunluk'        # Oda/kat bazlı talep sayısı
+    QR_OKUTMA_SIKLIK = 'qr_okutma_siklik'    # Personel QR okutma sıklığı
+    # Phase 2.5 - QR ve Talep Sistemi
+    TALEP_KARSILAMA_SURE = 'talep_karsilama_sure'    # Talep karşılama süresi (dakika)
+    TALEP_SIKLIK = 'talep_siklik'                    # Oda bazlı talep sıklığı
+    DOLUM_SAAT_DAGILIM = 'dolum_saat_dagilim'        # Dolum saati dağılımı
+    QR_OKUTMA_PERFORMANS = 'qr_okutma_performans'    # QR okutma performansı
 
 class MLAlertType(str, enum.Enum):
     """ML uyarı tipleri"""
@@ -671,8 +680,12 @@ class MLAlertType(str, enum.Enum):
     # Phase 2 - Zimmet ve Doluluk
     ZIMMET_FIRE_YUKSEK = 'zimmet_fire_yuksek'        # Yüksek fire oranı
     ZIMMET_KULLANIM_DUSUK = 'zimmet_kullanim_dusuk'  # Düşük kullanım
-    BOSTA_TUKETIM_VAR = 'bosta_tuketim_var'          # Boş oda tüketim (hırsızlık!)
+    BOSTA_TUKETIM_VAR = 'bosta_tuketim_var'          # Boş oda tüketim
     DOLUDA_TUKETIM_YOK = 'doluda_tuketim_yok'        # Dolu oda tüketim yok
+    # Phase 3 - QR & Talep Sistemi
+    TALEP_YANITLANMADI = 'talep_yanitlanmadi'        # Uzun süre yanıtlanmayan talep
+    TALEP_YOGUNLUK_YUKSEK = 'talep_yogunluk_yuksek'  # Aşırı talep yoğunluğu
+    QR_KULLANIM_DUSUK = 'qr_kullanim_dusuk'          # QR sistemi az kullanılıyor
 
 class MLAlertSeverity(str, enum.Enum):
     """ML uyarı önem seviyeleri"""
