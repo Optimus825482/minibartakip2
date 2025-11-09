@@ -656,6 +656,11 @@ class MLMetricType(str, enum.Enum):
     TUKETIM_MIKTAR = 'tuketim_miktar'
     DOLUM_SURE = 'dolum_sure'
     STOK_BITIS_TAHMINI = 'stok_bitis_tahmini'
+    # Phase 2 - Zimmet ve Doluluk
+    ZIMMET_KULLANIM = 'zimmet_kullanim'      # Zimmet kullanım oranı
+    ZIMMET_FIRE = 'zimmet_fire'              # Fire/kayıp oranı
+    DOLULUK_ORAN = 'doluluk_oran'            # Otel doluluk oranı
+    BOSTA_TUKETIM = 'bosta_tuketim'          # Boş odada tüketim
 
 class MLAlertType(str, enum.Enum):
     """ML uyarı tipleri"""
@@ -663,6 +668,11 @@ class MLAlertType(str, enum.Enum):
     TUKETIM_ANOMALI = 'tuketim_anomali'
     DOLUM_GECIKME = 'dolum_gecikme'
     STOK_BITIS_UYARI = 'stok_bitis_uyari'
+    # Phase 2 - Zimmet ve Doluluk
+    ZIMMET_FIRE_YUKSEK = 'zimmet_fire_yuksek'        # Yüksek fire oranı
+    ZIMMET_KULLANIM_DUSUK = 'zimmet_kullanim_dusuk'  # Düşük kullanım
+    BOSTA_TUKETIM_VAR = 'bosta_tuketim_var'          # Boş oda tüketim (hırsızlık!)
+    DOLUDA_TUKETIM_YOK = 'doluda_tuketim_yok'        # Dolu oda tüketim yok
 
 class MLAlertSeverity(str, enum.Enum):
     """ML uyarı önem seviyeleri"""

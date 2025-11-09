@@ -83,6 +83,20 @@ with app.app_context():
     except Exception as e:
         print(f"   ❌ Hata: {str(e)}")
         print()
+    
+    print("6️⃣ Yeni Metrikler (Phase 2)...")
+    try:
+        from models import MLMetric
+        
+        zimmet_count = db.session.query(MLMetric).filter_by(metric_type='zimmet_fire').count()
+        occupancy_count = db.session.query(MLMetric).filter_by(metric_type='bosta_tuketim').count()
+        
+        print(f"   ✅ Zimmet metrikleri: {zimmet_count} kayıt")
+        print(f"   ✅ Doluluk metrikleri: {occupancy_count} kayıt")
+        print()
+    except Exception as e:
+        print(f"   ❌ Hata: {str(e)}")
+        print()
 
 print("=" * 60)
 print("✅ TEST TAMAMLANDI!")

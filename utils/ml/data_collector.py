@@ -192,6 +192,163 @@ class DataCollector:
             logger.error(f"❌ Dolum süresi metrik toplama hatası: {str(e)}")
             return 0
     
+    def collect_zimmet_metrics(self):
+        """
+        Zimmet kullanım ve fire metriklerini topla
+        Returns: Toplanan metrik sayısı
+        """
+        try:
+            from models import Kullanici, PersonelZimmet, PersonelZimmetDetay, MLMetric
+            
+            # Aktif kat sorumluları
+            kat_sorumlulari = Kullanici.query.filter_by(
+                rol='kat_sorumlusu',
+                aktif=True
+            ).all()
+            
+            collected_count = 0
+            timestamp = datetime.now(timezone.utc)
+            
+            for personel in kat_sorumlulari:
+                # Aktif zimmetleri al
+                aktif_zimmetler = PersonelZimmet.query.filter_by(
+                    personel_id=personel.id,
+                    durum='aktif'
+                ).all()
+                
+                if not aktif_zimmetler:
+                    continue
+                
+                toplam_zimmet = 0
+                toplam_kullanim = 0
+                toplam_fire = 0
+                
+                for zimmet in aktif_zimmetler:
+                    for detay in zimmet.detaylar:
+                        toplam_zimmet += detay.miktar
+                        toplam_kullanim += detay.kullanilan_miktar
+                        # Fire = Zimmet - Kullanılan - Kalan
+                        fire = detay.miktar - detay.kullanilan_miktar - (detay.kalan_miktar or 0)
+                        toplam_fire += max(0, fire)
+                
+                if toplam_zimmet > 0:
+                    # Kullanım oranı
+                    kullanim_oran = (toplam_kullanim / toplam_zimmet * 100)
+                    metric = MLMetric(
+                        metric_type='zimmet_kullanim',
+                        entity_type='kat_sorumlusu',
+                        entity_id=personel.id,
+                        metric_value=float(kullanim_oran),
+                        timestamp=timestamp,
+                        extra_data={
+                            'personel_adi': f"{personel.ad} {personel.soyad}",
+                            'toplam_zimmet': toplam_zimmet,
+                            'toplam_kullanim': toplam_kullanim
+                        }
+                    )
+                    self.db.session.add(metric)
+                    collected_count += 1
+                    
+                    # Fire oranı
+                    fire_oran = (toplam_fire / toplam_zimmet * 100)
+                    metric = MLMetric(
+                        metric_type='zimmet_fire',
+                        entity_type='kat_sorumlusu',
+                        entity_id=personel.id,
+                        metric_value=float(fire_oran),
+                        timestamp=timestamp,
+                        extra_data={
+                            'personel_adi': f"{personel.ad} {personel.soyad}",
+                            'toplam_zimmet': toplam_zimmet,
+                            'toplam_fire': toplam_fire
+                        }
+                    )
+                    self.db.session.add(metric)
+                    collected_count += 1
+            
+            self.db.session.commit()
+            logger.info(f"✅ Zimmet metrikleri toplandı: {collected_count} kayıt")
+            return collected_count
+            
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"❌ Zimmet metrik toplama hatası: {str(e)}")
+            return 0
+    
+    def collect_occupancy_metrics(self):
+        """
+        Doluluk ve boş oda tüketim metriklerini topla
+        Returns: Toplanan metrik sayısı
+        """
+        try:
+            from models import Oda, MisafirKayit, MinibarIslem, MinibarIslemDetay, MLMetric
+            
+            # Son 24 saat
+            son_24_saat = datetime.now(timezone.utc) - timedelta(hours=24)
+            
+            # Aktif odaları al
+            odalar = Oda.query.filter_by(aktif=True).all()
+            
+            collected_count = 0
+            timestamp = datetime.now(timezone.utc)
+            
+            for oda in odalar:
+                # Oda dolu mu kontrol et (son 24 saatte check-in var mı?)
+                misafir = MisafirKayit.query.filter(
+                    MisafirKayit.oda_id == oda.id,
+                    MisafirKayit.kayit_tipi == 'check_in',
+                    MisafirKayit.kayit_tarihi >= son_24_saat
+                ).order_by(MisafirKayit.kayit_tarihi.desc()).first()
+                
+                # Check-out var mı?
+                checkout = MisafirKayit.query.filter(
+                    MisafirKayit.oda_id == oda.id,
+                    MisafirKayit.kayit_tipi == 'check_out',
+                    MisafirKayit.kayit_tarihi >= son_24_saat
+                ).order_by(MisafirKayit.kayit_tarihi.desc()).first()
+                
+                # Oda durumu belirle
+                oda_dolu = False
+                if misafir:
+                    if not checkout or checkout.kayit_tarihi < misafir.kayit_tarihi:
+                        oda_dolu = True
+                
+                # Son 24 saatteki tüketimi hesapla
+                tuketim_toplam = self.db.session.query(
+                    func.coalesce(func.sum(MinibarIslemDetay.tuketim), 0)
+                ).join(
+                    MinibarIslem
+                ).filter(
+                    MinibarIslem.oda_id == oda.id,
+                    MinibarIslem.islem_tarihi >= son_24_saat
+                ).scalar()
+                
+                # Boş oda ama tüketim var mı?
+                if not oda_dolu and tuketim_toplam > 0:
+                    metric = MLMetric(
+                        metric_type='bosta_tuketim',
+                        entity_type='oda',
+                        entity_id=oda.id,
+                        metric_value=float(tuketim_toplam),
+                        timestamp=timestamp,
+                        extra_data={
+                            'oda_no': oda.oda_no,
+                            'oda_dolu': False,
+                            'tuketim': int(tuketim_toplam)
+                        }
+                    )
+                    self.db.session.add(metric)
+                    collected_count += 1
+            
+            self.db.session.commit()
+            logger.info(f"✅ Doluluk metrikleri toplandı: {collected_count} kayıt")
+            return collected_count
+            
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"❌ Doluluk metrik toplama hatası: {str(e)}")
+            return 0
+    
     def collect_all_metrics(self):
         """
         Tüm metrikleri topla
@@ -203,13 +360,17 @@ class DataCollector:
             stok_count = self.collect_stok_metrics()
             tuketim_count = self.collect_tuketim_metrics()
             dolum_count = self.collect_dolum_metrics()
+            zimmet_count = self.collect_zimmet_metrics()
+            occupancy_count = self.collect_occupancy_metrics()
             
-            total_count = stok_count + tuketim_count + dolum_count
+            total_count = stok_count + tuketim_count + dolum_count + zimmet_count + occupancy_count
             
             logger.info(f"✅ Toplam {total_count} metrik toplandı")
             logger.info(f"   - Stok: {stok_count}")
             logger.info(f"   - Tüketim: {tuketim_count}")
             logger.info(f"   - Dolum: {dolum_count}")
+            logger.info(f"   - Zimmet: {zimmet_count}")
+            logger.info(f"   - Doluluk: {occupancy_count}")
             
             return total_count
             

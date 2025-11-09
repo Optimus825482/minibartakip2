@@ -317,6 +317,193 @@ class AnomalyDetector:
             logger.error(f"❌ Dolum süresi anomali tespiti hatası: {str(e)}")
             return 0
     
+    def detect_zimmet_anomalies(self):
+        """
+        Zimmet fire ve kullanım anomalilerini tespit et
+        Returns: Oluşturulan alert sayısı
+        """
+        try:
+            from models import MLMetric, MLAlert, Kullanici
+            
+            # Son 7 günlük zimmet metriklerini al
+            son_7_gun = datetime.now(timezone.utc) - timedelta(days=7)
+            
+            # Kat sorumluları
+            kat_sorumlulari = Kullanici.query.filter_by(
+                rol='kat_sorumlusu',
+                aktif=True
+            ).all()
+            
+            alert_count = 0
+            
+            for personel in kat_sorumlulari:
+                # Fire oranı metriklerini al
+                fire_metrikler = MLMetric.query.filter(
+                    MLMetric.metric_type == 'zimmet_fire',
+                    MLMetric.entity_type == 'kat_sorumlusu',
+                    MLMetric.entity_id == personel.id,
+                    MLMetric.timestamp >= son_7_gun
+                ).order_by(MLMetric.timestamp).all()
+                
+                if len(fire_metrikler) >= 2:
+                    son_fire = fire_metrikler[-1].metric_value
+                    
+                    # %20+ fire oranı varsa alert
+                    if son_fire >= 20:
+                        # Son 24 saatte aynı personel için alert var mı?
+                        son_24_saat = datetime.now(timezone.utc) - timedelta(hours=24)
+                        existing_alert = MLAlert.query.filter(
+                            MLAlert.alert_type == 'zimmet_fire_yuksek',
+                            MLAlert.entity_type == 'kat_sorumlusu',
+                            MLAlert.entity_id == personel.id,
+                            MLAlert.created_at >= son_24_saat,
+                            MLAlert.is_false_positive == False
+                        ).first()
+                        
+                        if not existing_alert:
+                            # Severity belirle
+                            if son_fire >= 40:
+                                severity = 'kritik'
+                            elif son_fire >= 30:
+                                severity = 'yuksek'
+                            else:
+                                severity = 'orta'
+                            
+                            message = f"{personel.ad} {personel.soyad} zimmet fire oranı %{son_fire:.1f}"
+                            suggested_action = "Zimmet kontrolü yapın. Kayıp/fire nedenlerini araştırın."
+                            
+                            alert = MLAlert(
+                                alert_type='zimmet_fire_yuksek',
+                                severity=severity,
+                                entity_type='kat_sorumlusu',
+                                entity_id=personel.id,
+                                metric_value=son_fire,
+                                expected_value=10.0,  # Beklenen fire oranı %10
+                                deviation_percent=((son_fire - 10) / 10 * 100),
+                                message=message,
+                                suggested_action=suggested_action
+                            )
+                            self.db.session.add(alert)
+                            alert_count += 1
+                
+                # Kullanım oranı metriklerini al
+                kullanim_metrikler = MLMetric.query.filter(
+                    MLMetric.metric_type == 'zimmet_kullanim',
+                    MLMetric.entity_type == 'kat_sorumlusu',
+                    MLMetric.entity_id == personel.id,
+                    MLMetric.timestamp >= son_7_gun
+                ).order_by(MLMetric.timestamp).all()
+                
+                if len(kullanim_metrikler) >= 2:
+                    son_kullanim = kullanim_metrikler[-1].metric_value
+                    
+                    # %30'dan az kullanım varsa alert
+                    if son_kullanim < 30:
+                        son_24_saat = datetime.now(timezone.utc) - timedelta(hours=24)
+                        existing_alert = MLAlert.query.filter(
+                            MLAlert.alert_type == 'zimmet_kullanim_dusuk',
+                            MLAlert.entity_type == 'kat_sorumlusu',
+                            MLAlert.entity_id == personel.id,
+                            MLAlert.created_at >= son_24_saat,
+                            MLAlert.is_false_positive == False
+                        ).first()
+                        
+                        if not existing_alert:
+                            severity = 'orta'
+                            message = f"{personel.ad} {personel.soyad} zimmet kullanım oranı düşük (%{son_kullanim:.1f})"
+                            suggested_action = "Zimmet kullanımını kontrol edin. Fazla zimmet verilmiş olabilir."
+                            
+                            alert = MLAlert(
+                                alert_type='zimmet_kullanim_dusuk',
+                                severity=severity,
+                                entity_type='kat_sorumlusu',
+                                entity_id=personel.id,
+                                metric_value=son_kullanim,
+                                expected_value=70.0,
+                                deviation_percent=((70 - son_kullanim) / 70 * 100),
+                                message=message,
+                                suggested_action=suggested_action
+                            )
+                            self.db.session.add(alert)
+                            alert_count += 1
+            
+            self.db.session.commit()
+            
+            if alert_count > 0:
+                logger.info(f"⚠️  {alert_count} zimmet anomalisi tespit edildi")
+            
+            return alert_count
+            
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"❌ Zimmet anomali tespiti hatası: {str(e)}")
+            return 0
+    
+    def detect_occupancy_anomalies(self):
+        """
+        Doluluk anomalilerini tespit et (boş oda tüketim)
+        Returns: Oluşturulan alert sayısı
+        """
+        try:
+            from models import MLMetric, MLAlert, Oda
+            
+            # Son 24 saatlik boş oda tüketim metriklerini al
+            son_24_saat = datetime.now(timezone.utc) - timedelta(hours=24)
+            
+            metrikler = MLMetric.query.filter(
+                MLMetric.metric_type == 'bosta_tuketim',
+                MLMetric.timestamp >= son_24_saat
+            ).all()
+            
+            alert_count = 0
+            
+            for metrik in metrikler:
+                # Bu oda için son 6 saatte alert var mı?
+                son_6_saat = datetime.now(timezone.utc) - timedelta(hours=6)
+                existing_alert = MLAlert.query.filter(
+                    MLAlert.alert_type == 'bosta_tuketim_var',
+                    MLAlert.entity_type == 'oda',
+                    MLAlert.entity_id == metrik.entity_id,
+                    MLAlert.created_at >= son_6_saat,
+                    MLAlert.is_false_positive == False
+                ).first()
+                
+                if not existing_alert:
+                    oda = Oda.query.filter_by(id=metrik.entity_id).first()
+                    if not oda:
+                        continue
+                    
+                    # Boş oda ama tüketim var = KRİTİK (hırsızlık olabilir!)
+                    severity = 'kritik'
+                    message = f"Oda {oda.oda_no} BOŞ ama tüketim var! ({int(metrik.metric_value)} ürün)"
+                    suggested_action = "ACİL güvenlik kontrolü yapın! Hırsızlık veya yetkisiz giriş olabilir."
+                    
+                    alert = MLAlert(
+                        alert_type='bosta_tuketim_var',
+                        severity=severity,
+                        entity_type='oda',
+                        entity_id=metrik.entity_id,
+                        metric_value=metrik.metric_value,
+                        expected_value=0.0,
+                        deviation_percent=100.0,
+                        message=message,
+                        suggested_action=suggested_action
+                    )
+                    self.db.session.add(alert)
+                    alert_count += 1
+            
+            self.db.session.commit()
+            
+            if alert_count > 0:
+                logger.info(f"⚠️  {alert_count} doluluk anomalisi tespit edildi")
+            
+            return alert_count
+            
+        except Exception as e:
+            self.db.session.rollback()
+            logger.error(f"❌ Doluluk anomali tespiti hatası: {str(e)}")
+            return 0
+    
     def detect_all_anomalies(self):
         """
         Tüm anomali tiplerini tespit et
@@ -328,14 +515,18 @@ class AnomalyDetector:
             stok_count = self.detect_stok_anomalies()
             tuketim_count = self.detect_tuketim_anomalies()
             dolum_count = self.detect_dolum_anomalies()
+            zimmet_count = self.detect_zimmet_anomalies()
+            occupancy_count = self.detect_occupancy_anomalies()
             
-            total_count = stok_count + tuketim_count + dolum_count
+            total_count = stok_count + tuketim_count + dolum_count + zimmet_count + occupancy_count
             
             if total_count > 0:
                 logger.info(f"⚠️  Toplam {total_count} anomali tespit edildi")
                 logger.info(f"   - Stok: {stok_count}")
                 logger.info(f"   - Tüketim: {tuketim_count}")
                 logger.info(f"   - Dolum: {dolum_count}")
+                logger.info(f"   - Zimmet: {zimmet_count}")
+                logger.info(f"   - Doluluk: {occupancy_count}")
             else:
                 logger.info("✅ Anomali tespit edilmedi")
             
