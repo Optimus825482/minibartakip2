@@ -214,15 +214,15 @@
             <!-- İzlenen 5 Metrik -->
             <div class="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-md">
                 <h4 class="font-semibold text-slate-900 dark:text-white mb-4 text-center">
-                    📈 İzlenen 5 Ana Metrik
+                    📈 İzlenen 7 Ana Metrik
                 </h4>
                 
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <div class="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border-l-4 border-red-500">
-                        <div class="text-center mb-2">
-                            <i class="fas fa-box text-3xl text-red-500"></i>
+                <div class="grid grid-cols-1 md:grid-cols-7 gap-2">
+                    <div class="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg border-l-4 border-red-500">
+                        <div class="text-center mb-1">
+                            <i class="fas fa-box text-2xl text-red-500"></i>
                         </div>
-                        <h5 class="text-sm font-bold text-slate-900 dark:text-white text-center">Stok Seviyeleri</h5>
+                        <h5 class="text-xs font-bold text-slate-900 dark:text-white text-center">Stok Seviyeleri</h5>
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-2">
                             Depo stok takibi, %30+ sapma tespiti, 7 gün önceden uyarı
                         </p>
@@ -264,8 +264,89 @@
                         </div>
                         <h5 class="text-sm font-bold text-slate-900 dark:text-white text-center">Oda Doluluk</h5>
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-2">
-                            Yetkisiz kullanım tespiti, doluluk-tüketim korelasyonu, güvenlik kontrolü
+                            Yetkisiz kullanım tespiti, doluluk-tüketim korelasyonu
                         </p>
+                    </div>
+
+                    <div class="bg-pink-50 dark:bg-pink-900/20 p-3 rounded-lg border-l-4 border-pink-500">
+                        <div class="text-center mb-2">
+                            <i class="fas fa-bell text-3xl text-pink-500"></i>
+                        </div>
+                        <h5 class="text-sm font-bold text-slate-900 dark:text-white text-center">Talep Yanıt</h5>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-2">
+                            Misafir talep yanıt süresi, 30+ dakika uyarı
+                        </p>
+                    </div>
+
+                    <div class="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border-l-4 border-indigo-500">
+                        <div class="text-center mb-2">
+                            <i class="fas fa-qrcode text-3xl text-indigo-500"></i>
+                        </div>
+                        <h5 class="text-sm font-bold text-slate-900 dark:text-white text-center">QR Kullanımı</h5>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-2">
+                            Personel QR okutma sıklığı, sistem kullanım takibi
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR & Talep Sistemi Açıklaması -->
+            <div class="bg-gradient-to-r from-pink-50 to-indigo-50 dark:from-pink-900/20 dark:to-indigo-900/20 rounded-lg p-6 shadow-md border-2 border-pink-300 dark:border-pink-700">
+                <h4 class="font-semibold text-slate-900 dark:text-white mb-4 text-center">
+                    🔔 QR Kod & Misafir Talep Sistemi
+                </h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                        <div class="flex items-center mb-3">
+                            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-qrcode text-2xl text-indigo-600"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-bold text-slate-900 dark:text-white">QR Kod Sistemi</h5>
+                                <p class="text-xs text-slate-500">Personel Takip & Güvenlik</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-600 dark:text-slate-400">Her oda için benzersiz QR kod</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-600 dark:text-slate-400">Personel hangi saatte hangi odaya gitti (kayıt altında)</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-600 dark:text-slate-400">Hızlı işlem: QR okut → Oda seç → İşlem yap</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-lg">
+                        <div class="flex items-center mb-3">
+                            <div class="w-12 h-12 bg-pink-100 dark:bg-pink-900/30 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-bell text-2xl text-pink-600"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-bold text-slate-900 dark:text-white">Misafir Talep Sistemi</h5>
+                                <p class="text-xs text-slate-500">Hızlı Yanıt & Memnuniyet</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-600 dark:text-slate-400">Misafir QR okutup dolum talebi gönderir</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-600 dark:text-slate-400">Kat sorumlusuna anlık bildirim</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-600 dark:text-slate-400">Yanıt süresi otomatik hesaplanır (30+ dk uyarı)</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
