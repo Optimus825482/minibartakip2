@@ -105,7 +105,6 @@ class DataCollector:
                 if tuketim_toplam > 0:
                     metric = MLMetric(
                         metric_type='tuketim_oran',  # Railway'de: tuketim_oran
-                        entity_type='oda',
                         entity_id=oda.id,
                         metric_value=float(tuketim_toplam),
                         timestamp=timestamp,
