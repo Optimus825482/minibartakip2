@@ -37,6 +37,14 @@ app.config.from_object('config.Config')
 # CSRF Koruması Aktif
 csrf = CSRFProtect(app)
 
+# CSRF token'ı tüm template'lere ekle
+@app.context_processor
+def inject_csrf_token():
+    """CSRF token'ı template'lere enjekte et"""
+    from flask_wtf.csrf import generate_csrf
+    # Hem fonksiyon hem de değişken olarak sağla (geriye dönük uyumluluk için)
+    return dict(csrf_token=generate_csrf)
+
 # Rate Limiting Devre Dışı (İhtiyaç halinde açılabilir)
 # limiter = Limiter(
 #     app=app,
