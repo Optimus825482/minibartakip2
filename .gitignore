@@ -97,3 +97,6 @@ migration_checkpoint.json
 docker-compose.override.yml
 *.sql
 !init_db.sql
+
+.kiro/settings/mcp.json
+.env.railway.example
