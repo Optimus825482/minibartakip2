@@ -2917,10 +2917,33 @@ def start_scheduler():
             replace_existing=True
         )
         
+        # Günde 2 kez stok bitiş kontrolü (sabah 9 ve akşam 6)
+        scheduler.add_job(
+            func=lambda: check_stock_depletion(),
+            trigger='cron',
+            hour='9,18',
+            id='ml_stock_depletion_check',
+            name='ML Stok Bitiş Kontrolü',
+            replace_existing=True
+        )
+        
+        # Her gece 03:00'te eski alertleri temizle
+        scheduler.add_job(
+            func=lambda: cleanup_old_alerts(),
+            trigger='cron',
+            hour=3,
+            minute=0,
+            id='ml_alert_cleanup',
+            name='ML Alert Temizleme',
+            replace_existing=True
+        )
+        
         print("✅ ML Scheduler başlatıldı")
         print(f"   - Veri toplama: Her {data_collection_interval//60} dakika")
         print(f"   - Anomali tespiti: Her {anomaly_check_interval//60} dakika")
         print(f"   - Model eğitimi: {ml_training_schedule}")
+        print(f"   - Stok bitiş kontrolü: Günde 2 kez (09:00, 18:00)")
+        print(f"   - Alert temizleme: Her gece 03:00")
     
     scheduler.start()
     print("✅ Scheduler başlatıldı (Günlük dosya temizleme: 02:00)")
@@ -2956,6 +2979,26 @@ def train_ml_models():
             trainer.train_all_models()
     except Exception as e:
         logger.error(f"❌ ML model eğitimi hatası: {str(e)}")
+
+def check_stock_depletion():
+    """Stok bitiş kontrolü job'u"""
+    try:
+        from utils.ml.metrics_calculator import MetricsCalculator
+        with app.app_context():
+            calculator = MetricsCalculator(db)
+            calculator.check_stock_depletion_alerts()
+    except Exception as e:
+        logger.error(f"❌ Stok bitiş kontrolü hatası: {str(e)}")
+
+def cleanup_old_alerts():
+    """Eski alertleri temizle job'u"""
+    try:
+        from utils.ml.alert_manager import AlertManager
+        with app.app_context():
+            alert_manager = AlertManager(db)
+            alert_manager.cleanup_old_alerts(days=90)
+    except Exception as e:
+        logger.error(f"❌ Alert temizleme hatası: {str(e)}")
 
 # Scheduler'ı başlat
 try:

@@ -3,6 +3,7 @@ Model Trainer - ML Anomaly Detection System
 Model eğitim servisi: Isolation Forest modellerini eğitir
 """
 
+import os
 from datetime import datetime, timezone, timedelta
 from sklearn.ensemble import IsolationForest
 from sklearn.model_selection import train_test_split
@@ -343,7 +344,3 @@ class ModelTrainer:
         except Exception as e:
             logger.error(f"❌ Model eğitimi hatası: {str(e)}")
             return 0
-
-
-# Missing import
-import os

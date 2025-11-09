@@ -46,9 +46,19 @@ def register_misafir_qr_routes(app):
                                      token=token)
             else:
                 # Misafir - dolum talebi sayfasına yönlendir
+                # Otel logosunu al
+                otel_logo = None
+                otel_adi = None
+                
+                if oda.kat and oda.kat.otel:
+                    otel_logo = oda.kat.otel.logo
+                    otel_adi = oda.kat.otel.ad
+                
                 return render_template('misafir_dolum_talebi.html',
                                      oda=oda,
-                                     token=token)
+                                     token=token,
+                                     otel_logo=otel_logo,
+                                     otel_adi=otel_adi)
                 
         except Exception as e:
             log_hata(e, modul='qr_redirect', extra_info={'token': token[:10]})
@@ -75,6 +85,14 @@ def register_misafir_qr_routes(app):
                     'success': False,
                     'message': 'Geçersiz QR kod'
                 }), 404
+            
+            # Otel logosunu al (Oda -> Kat -> Otel)
+            otel_logo = None
+            otel_adi = None
+            
+            if oda.kat and oda.kat.otel:
+                otel_logo = oda.kat.otel.logo
+                otel_adi = oda.kat.otel.ad
             
             if request.method == 'POST':
                 # Dolum talebi kaydet
@@ -121,7 +139,9 @@ def register_misafir_qr_routes(app):
             else:  # GET
                 return render_template('misafir_dolum_talebi.html',
                                      oda=oda,
-                                     token=token)
+                                     token=token,
+                                     otel_logo=otel_logo,
+                                     otel_adi=otel_adi)
                 
         except Exception as e:
             db.session.rollback()
