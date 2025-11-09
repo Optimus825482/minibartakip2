@@ -7,6 +7,52 @@ import os
 import sys
 from sqlalchemy import create_engine, text, inspect
 
+def fix_ml_models_columns(engine):
+    """ML Models tablosundaki Türkçe kolon isimlerini İngilizce'ye çevir"""
+    try:
+        inspector = inspect(engine)
+        
+        if 'ml_models' not in inspector.get_table_names():
+            print("⚠️  ml_models tablosu yok")
+            return True
+        
+        columns = [col['name'] for col in inspector.get_columns('ml_models')]
+        print(f"📋 ml_models kolonları: {columns}")
+        
+        # Türkçe kolon isimleri varsa değiştir
+        renames = {
+            'model_tipi': 'model_type',
+            'metrik_tipi': 'metric_type',
+            'model_verisi': 'model_data',
+            'parametreler': 'parameters',
+            'egitim_tarihi': 'training_date',
+            'dogruluk': 'accuracy',
+            'kesinlik': 'precision',
+            'duyarlilik': 'recall',
+            'aktif': 'is_active'
+        }
+        
+        renamed_count = 0
+        with engine.connect() as conn:
+            for old_name, new_name in renames.items():
+                if old_name in columns:
+                    print(f"🔧 {old_name} -> {new_name}")
+                    conn.execute(text(f"ALTER TABLE ml_models RENAME COLUMN {old_name} TO {new_name};"))
+                    renamed_count += 1
+            
+            if renamed_count > 0:
+                conn.commit()
+                print(f"✅ {renamed_count} kolon ismi değiştirildi!")
+            else:
+                print("✅ ml_models kolonları zaten doğru")
+        
+        return True
+        
+    except Exception as e:
+        print(f"⚠️  ml_models fix hatası: {str(e)}")
+        return True
+
+
 def fix_ml_metrics_on_startup():
     """Startup'ta ML Metrics tablosunu kontrol et ve düzelt"""
     try:
@@ -70,6 +116,10 @@ def fix_ml_metrics_on_startup():
             return True
         
         print("✅ ML Metrics tablosu doğru yapıda")
+        
+        # ML Models tablosunu da düzelt
+        fix_ml_models_columns(engine)
+        
         return True
         
     except Exception as e:
