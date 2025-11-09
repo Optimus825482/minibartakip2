@@ -30,20 +30,46 @@ def fix_ml_metrics_on_startup():
             return True
         
         columns = [col['name'] for col in inspector.get_columns('ml_metrics')]
+        print(f"📋 Mevcut kolonlar: {columns}")
         
-        if 'entity_type' not in columns:
-            print("✅ entity_type kolonu zaten yok")
+        # entity_id yoksa tabloyu yeniden oluştur
+        if 'entity_id' not in columns:
+            print("🔧 entity_id kolonu yok, tablo yeniden oluşturuluyor...")
+            
+            with engine.connect() as conn:
+                # Tabloyu sil ve yeniden oluştur
+                conn.execute(text("DROP TABLE IF EXISTS ml_metrics CASCADE;"))
+                conn.execute(text("""
+                    CREATE TABLE ml_metrics (
+                        id SERIAL PRIMARY KEY,
+                        metric_type VARCHAR(50) NOT NULL,
+                        entity_id INTEGER NOT NULL,
+                        metric_value DOUBLE PRECISION NOT NULL,
+                        timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        extra_data JSONB
+                    );
+                """))
+                conn.execute(text("CREATE INDEX idx_ml_metrics_type_time ON ml_metrics(metric_type, timestamp);"))
+                conn.execute(text("CREATE INDEX idx_ml_metrics_entity ON ml_metrics(entity_id);"))
+                conn.commit()
+                
+            print("✅ ML Metrics tablosu yeniden oluşturuldu!")
             return True
         
-        print("🔧 entity_type kolonu kaldırılıyor...")
+        # entity_type varsa kaldır
+        if 'entity_type' in columns:
+            print("🔧 entity_type kolonu kaldırılıyor...")
+            
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE ml_metrics DROP COLUMN IF EXISTS entity_type CASCADE;"))
+                conn.execute(text("DROP INDEX IF EXISTS idx_ml_metrics_entity;"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ml_metrics_entity ON ml_metrics(entity_id);"))
+                conn.commit()
+            
+            print("✅ entity_type kolonu kaldırıldı!")
+            return True
         
-        with engine.connect() as conn:
-            conn.execute(text("ALTER TABLE ml_metrics DROP COLUMN IF EXISTS entity_type CASCADE;"))
-            conn.execute(text("DROP INDEX IF EXISTS idx_ml_metrics_entity;"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ml_metrics_entity ON ml_metrics(entity_id);"))
-            conn.commit()
-        
-        print("✅ ML Metrics tablosu düzeltildi!")
+        print("✅ ML Metrics tablosu doğru yapıda")
         return True
         
     except Exception as e:
