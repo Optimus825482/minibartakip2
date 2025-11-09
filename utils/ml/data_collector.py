@@ -105,7 +105,7 @@ class DataCollector:
                 # Sadece tüketim varsa kaydet
                 if tuketim_toplam > 0:
                     metric = MLMetric(
-                        metric_type='tuketim_miktar',
+                        metric_type='tuketim_oran',  # Railway'de: tuketim_oran
                         entity_type='oda',
                         entity_id=oda.id,
                         metric_value=float(tuketim_toplam),
@@ -284,34 +284,37 @@ class DataCollector:
             from models import Oda, MisafirKayit, MinibarIslem, MinibarIslemDetay, MLMetric
             
             # Son 24 saat
-            son_24_saat = datetime.now(timezone.utc) - timedelta(hours=24)
+            simdi = datetime.now(timezone.utc)
+            son_24_saat = simdi - timedelta(hours=24)
             
             # Aktif odaları al
             odalar = Oda.query.filter_by(aktif=True).all()
             
             collected_count = 0
-            timestamp = datetime.now(timezone.utc)
+            timestamp = simdi
             
             for oda in odalar:
-                # Oda dolu mu kontrol et (son 24 saatte check-in var mı?)
+                # Oda dolu mu kontrol et (son 24 saatte arrival var mı?)
                 misafir = MisafirKayit.query.filter(
                     MisafirKayit.oda_id == oda.id,
-                    MisafirKayit.kayit_tipi == 'check_in',
-                    MisafirKayit.kayit_tarihi >= son_24_saat
-                ).order_by(MisafirKayit.kayit_tarihi.desc()).first()
+                    MisafirKayit.kayit_tipi == 'arrival',
+                    MisafirKayit.giris_tarihi >= son_24_saat.date()
+                ).order_by(MisafirKayit.giris_tarihi.desc()).first()
                 
-                # Check-out var mı?
-                checkout = MisafirKayit.query.filter(
+                # In-house kayıtları kontrol et (hala odada mı?)
+                in_house = MisafirKayit.query.filter(
                     MisafirKayit.oda_id == oda.id,
-                    MisafirKayit.kayit_tipi == 'check_out',
-                    MisafirKayit.kayit_tarihi >= son_24_saat
-                ).order_by(MisafirKayit.kayit_tarihi.desc()).first()
+                    MisafirKayit.kayit_tipi == 'in_house',
+                    MisafirKayit.giris_tarihi <= simdi.date(),
+                    MisafirKayit.cikis_tarihi >= simdi.date()
+                ).order_by(MisafirKayit.giris_tarihi.desc()).first()
                 
                 # Oda durumu belirle
                 oda_dolu = False
-                if misafir:
-                    if not checkout or checkout.kayit_tarihi < misafir.kayit_tarihi:
-                        oda_dolu = True
+                if in_house:
+                    oda_dolu = True
+                elif misafir and misafir.cikis_tarihi >= simdi.date():
+                    oda_dolu = True
                 
                 # Son 24 saatteki tüketimi hesapla
                 tuketim_toplam = self.db.session.query(

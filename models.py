@@ -705,7 +705,12 @@ class MLMetric(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     metric_type = db.Column(
-        db.Enum('stok_seviye', 'tuketim_miktar', 'dolum_sure', 'stok_bitis_tahmini', name='ml_metric_type'),
+        db.Enum(
+            'stok_seviye', 'tuketim_miktar', 'dolum_sure', 'stok_bitis_tahmini',
+            'zimmet_kullanim', 'zimmet_fire', 'doluluk_oran', 'bosta_tuketim',
+            'talep_yanit_sure', 'talep_yogunluk', 'qr_okutma_siklik', 'qr_okutma_performans',
+            name='ml_metric_type'
+        ),
         nullable=False
     )
     entity_type = db.Column(db.String(50), nullable=False)  # 'urun', 'oda', 'kat_sorumlusu'
