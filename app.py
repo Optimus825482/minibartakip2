@@ -50,16 +50,19 @@ csrf = CSRFProtect(app)
 from models import db
 db.init_app(app)
 
-# SQLAlchemy Metadata Refresh - ML Metrics entity_type fix
-# Railway deployment sonrası metadata cache temizliği
+# SQLAlchemy Engine ve Session Refresh - ML Metrics entity_type fix
+# ÇÖZÜM: Engine'i dispose ederek tüm connection pool'u ve metadata cache'i temizle
 with app.app_context():
     try:
-        # Metadata'yı zorla yenile
-        db.metadata.clear()
-        db.metadata.reflect(bind=db.engine)
-        logger.info("✅ SQLAlchemy metadata yenilendi")
+        # Tüm bağlantıları kapat ve engine'i yenile
+        db.engine.dispose()
+        # Yeni bir connection al ve test et
+        with db.engine.connect() as conn:
+            result = conn.execute(db.text("SELECT 1"))
+            result.close()
+        logger.info("✅ Database engine yenilendi ve test edildi")
     except Exception as e:
-        logger.warning(f"⚠️ Metadata refresh hatası (normal): {str(e)[:100]}")
+        logger.warning(f"⚠️ Engine refresh hatası: {str(e)[:200]}")
 
 # Database Connection Retry Mekanizması - Railway Timeout Fix v3 (ULTRA AGRESIF)
 def init_db_with_retry(max_retries=3, retry_delay=10):
