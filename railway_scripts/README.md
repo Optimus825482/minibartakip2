@@ -86,6 +86,21 @@ Railway veritabanındaki tüm tabloları listeler.
 #### `test_railway_connection.py`
 Railway bağlantısını ve ML tablolarını test eder.
 
+#### `railway_full_check.py`
+**KAPSAMLI DURUM KONTROLÜ** - Deployment öncesi/sonrası tam sistem kontrolü.
+```bash
+python railway_scripts/railway_full_check.py
+```
+
+**Kontrol Ettiği Bileşenler:**
+- ✅ Veritabanı bilgileri (versiyon, boyut, tablo sayısı)
+- ✅ ML tablolarının detaylı durumu
+- ✅ Tüm enum değerlerinin listesi
+- ✅ Index sayıları
+- ✅ Foreign key ilişkileri
+- ✅ Uygulama verilerinin varlığı
+- ✅ Son aktivite bilgileri
+
 ## 🚀 Kurulum Sırası
 
 Railway'e ML sistemini kurmak için şu sırayı izleyin:

@@ -700,7 +700,7 @@ class MLMetric(db.Model):
     __tablename__ = 'ml_metrics'
     __table_args__ = (
         db.Index('idx_ml_metrics_type_time', 'metric_type', 'timestamp'),
-        db.Index('idx_ml_metrics_entity', 'entity_type', 'entity_id'),
+        db.Index('idx_ml_metrics_entity', 'entity_id'),
     )
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -713,14 +713,13 @@ class MLMetric(db.Model):
         ),
         nullable=False
     )
-    entity_type = db.Column(db.String(50), nullable=False)  # 'urun', 'oda', 'kat_sorumlusu'
     entity_id = db.Column(db.Integer, nullable=False)
     metric_value = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     extra_data = db.Column(JSONB, nullable=True)  # Ek bilgiler (JSONB formatında)
     
     def __repr__(self):
-        return f'<MLMetric {self.metric_type} - {self.entity_type}#{self.entity_id}>'
+        return f'<MLMetric {self.metric_type} - #{self.entity_id}>'
 
 
 class MLModel(db.Model):
@@ -754,7 +753,7 @@ class MLAlert(db.Model):
     __table_args__ = (
         db.Index('idx_ml_alerts_severity_read', 'severity', 'is_read'),
         db.Index('idx_ml_alerts_created', 'created_at'),
-        db.Index('idx_ml_alerts_entity', 'entity_type', 'entity_id'),
+        db.Index('idx_ml_alerts_entity', 'entity_id'),
     )
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -766,8 +765,7 @@ class MLAlert(db.Model):
         db.Enum('dusuk', 'orta', 'yuksek', 'kritik', name='ml_alert_severity'),
         nullable=False
     )
-    entity_type = db.Column(db.String(50), nullable=False)  # 'urun', 'oda', 'kat_sorumlusu'
-    entity_id = db.Column(db.Integer, nullable=False)
+    entity_id = db.Column(db.Integer, nullable=False)  # urun_id, oda_id, kullanici_id
     metric_value = db.Column(db.Float, nullable=False)
     expected_value = db.Column(db.Float)
     deviation_percent = db.Column(db.Float)

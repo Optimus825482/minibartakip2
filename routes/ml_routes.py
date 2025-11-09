@@ -97,14 +97,15 @@ def api_get_alerts():
         alerts_data = []
         for alert in alerts:
             try:
-                # Entity bilgisini al
-                entity_name = get_entity_name(alert.entity_type, alert.entity_id)
+                # Entity tipini alert_type'dan çıkar
+                entity_type = infer_entity_type_from_alert(alert.alert_type)
+                entity_name = get_entity_name(entity_type, alert.entity_id)
                 
                 alerts_data.append({
                     'id': alert.id,
                     'alert_type': alert.alert_type,
                     'severity': alert.severity,
-                    'entity_type': alert.entity_type,
+                    'entity_type': entity_type,
                     'entity_id': alert.entity_id,
                     'entity_name': entity_name,
                     'metric_value': alert.metric_value,
@@ -229,10 +230,13 @@ def api_get_metrics():
         metrics_data = []
         for metric in metrics:
             try:
+                # Entity tipini metric_type'dan çıkar
+                entity_type = infer_entity_type_from_metric(metric.metric_type)
+                
                 metrics_data.append({
                     'id': metric.id,
                     'metric_type': metric.metric_type,
-                    'entity_type': metric.entity_type,
+                    'entity_type': entity_type,
                     'entity_id': metric.entity_id,
                     'metric_value': metric.metric_value,
                     'timestamp': metric.timestamp.isoformat(),
@@ -355,6 +359,28 @@ def api_statistics():
         }), 500
 
 
+def infer_entity_type_from_alert(alert_type):
+    """Alert tipinden entity tipini çıkar"""
+    if alert_type in ['stok_anomali', 'stok_bitis_uyari']:
+        return 'urun'
+    elif alert_type in ['tuketim_anomali', 'dolum_gecikme']:
+        return 'oda'
+    else:
+        return 'unknown'
+
+
+def infer_entity_type_from_metric(metric_type):
+    """Metric tipinden entity tipini çıkar"""
+    if metric_type in ['stok_seviye', 'stok_bitis_tahmini']:
+        return 'urun'
+    elif metric_type in ['tuketim_miktar', 'dolum_sure', 'doluluk_oran', 'bosta_tuketim']:
+        return 'oda'
+    elif metric_type in ['zimmet_kullanim', 'zimmet_fire', 'qr_okutma_siklik', 'qr_okutma_performans']:
+        return 'kat_sorumlusu'
+    else:
+        return 'unknown'
+
+
 def get_entity_name(entity_type, entity_id):
     """Entity adını getir - Transaction-safe"""
     try:
@@ -374,7 +400,7 @@ def get_entity_name(entity_type, entity_id):
             return f"{kullanici.ad} {kullanici.soyad}" if kullanici else f"Personel #{entity_id}"
         
         else:
-            return f"{entity_type} #{entity_id}"
+            return f"#{entity_id}"
     
     except Exception as e:
         logger.error(f"❌ Entity adı getirme hatası: {str(e)}")
@@ -383,7 +409,7 @@ def get_entity_name(entity_type, entity_id):
             db.session.rollback()
         except:
             pass
-        return f"{entity_type} #{entity_id}"
+        return f"#{entity_id}"
 
 
 def register_ml_routes(app):
